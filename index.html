@@ -898,21 +898,39 @@ const _SB_URL = 'https://fizhwfqgekmczutvqaxn.supabase.co';
 const _SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZpemh3ZnFnZWttY3p1dHZxYXhuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NTI3MTIsImV4cCI6MjA5MTIyODcxMn0.JHPrEnMnR14L_8tU6ZpQ_XOtA-o3t7yTN30KlLXf54k';
 const _sb = supabase.createClient(_SB_URL, _SB_KEY);
 
+async function sbFetchAll(table, order) {
+  var all = [];
+  var from = 0;
+  var batchSize = 1000;
+  while (true) {
+    var q = _sb.from(table).select('*').range(from, from + batchSize - 1);
+    if (order) q = q.order(order, {ascending: true});
+    var res = await q;
+    if (res.error) throw res.error;
+    var rows = res.data || [];
+    all = all.concat(rows);
+    if (rows.length < batchSize) break;
+    from += batchSize;
+  }
+  return all;
+}
+
 async function sbLoadAll() {
   try {
-    var [rRep, rErr, rRes, rUsr, rLog] = await Promise.all([
+    var [rRep, rRes, rUsr, rLog] = await Promise.all([
       _sb.from('reports').select('*').order('ts', {ascending: true}),
-      _sb.from('errors').select('*').order('id', {ascending: true}),
       _sb.from('resolved').select('*'),
       _sb.from('users').select('*').order('added_at', {ascending: true}),
       _sb.from('upload_log').select('*').order('ts', {ascending: true}),
     ]);
+    // Errors fetched in pages of 1000 to get all rows
+    var errRows = await sbFetchAll('errors', 'id');
     db.reports = (rRep.data || []).map(function(r) {
       return {id: r.id, label: r.label, ts: r.ts, count: r.count,
               expected: r.expected, platforms: r.platforms || [],
               uploadedBy: r.uploaded_by};
     });
-    db.errors = (rErr.data || []).map(function(e) {
+    db.errors = errRows.map(function(e) {
       return {reportId: e.report_id, reportLabel: e.report_label, ts: e.ts,
               platform: e.platform, category: e.category, resolution: e.resolution,
               accountId: e.account_id, clientId: e.client_id, client: e.client,
