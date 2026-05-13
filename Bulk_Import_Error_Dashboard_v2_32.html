@@ -1,0 +1,3377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bulk Import Error Dashboard</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #f5f4f1;
+    --surface: #ffffff;
+    --surface2: #f0efe9;
+    --border: rgba(0,0,0,0.08);
+    --border-med: rgba(0,0,0,0.14);
+    --text: #1a1917;
+    --text2: #6b6a65;
+    --text3: #9b9a95;
+    --accent: #1a1917;
+    --radius: 10px;
+    --radius-lg: 14px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* LAYOUT */
+  .app { display: flex; min-height: 100vh; }
+
+  .sidebar {
+    width: 220px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-right: 0.5px solid var(--border-med);
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 45px; left: 0; bottom: 0;
+    z-index: 100;
+  }
+
+  .sidebar-logo {
+    padding: 24px 20px 20px;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .sidebar-logo .logo-mark {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--text2);
+    margin-bottom: 2px;
+  }
+  .sidebar-logo .logo-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.3;
+  }
+
+  .sidebar-nav { flex: 1; padding: 12px 10px; }
+  .nav-section-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--text3);
+    padding: 12px 10px 6px;
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text2);
+    font-weight: 400;
+    transition: background .15s, color .15s;
+    margin-bottom: 1px;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+  }
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { background: var(--text); color: #fff; font-weight: 500; }
+  .nav-item svg { width: 15px; height: 15px; flex-shrink: 0; opacity: .7; }
+  .nav-item.active svg { opacity: 1; }
+
+  .sidebar-footer {
+    padding: 14px 20px;
+    border-top: 0.5px solid var(--border);
+    font-size: 11px;
+    color: var(--text3);
+  }
+
+  .main { margin-left: 220px; padding: 32px 36px; max-width: 1200px; margin-top: 45px; }
+
+  /* VIEWS */
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* PAGE HEADER */
+  .page-header { margin-bottom: 28px; }
+  .page-title { font-size: 22px; font-weight: 600; color: var(--text); }
+  .page-sub { font-size: 13px; color: var(--text2); margin-top: 4px; }
+
+  /* CARDS */
+  .card {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    border: 0.5px solid var(--border-med);
+    padding: 20px 22px;
+    margin-bottom: 16px;
+  }
+  .card-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 14px;
+  }
+
+  /* METRICS */
+  .metrics { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; margin-bottom: 20px; }
+  .metric {
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 0.5px solid var(--border-med);
+    padding: 16px 18px;
+  }
+  .metric-label { font-size: 11px; color: var(--text3); font-weight: 500; margin-bottom: 8px; }
+  .metric-value { font-size: 28px; font-weight: 600; letter-spacing: -.02em; color: var(--text); }
+  .metric-value.amber { color: #b45309; }
+
+  /* GRIDS */
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px; margin-bottom: 16px; }
+
+  /* TABLE */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th {
+    text-align: left;
+    padding: 10px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--text3);
+    border-bottom: 0.5px solid var(--border-med);
+  }
+  td { padding: 10px 12px; border-bottom: 0.5px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface2); }
+
+  /* BADGES */
+  .badge { display: inline-block; font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 99px; white-space: nowrap; }
+  .b-aviva { background: #dbeafe; color: #1e40af; }
+  .b-tp { background: #dcfce7; color: #166534; }
+  .b-transact { background: #ede9fe; color: #5b21b6; }
+  .b-wealthtime { background: #fef3c7; color: #92400e; }
+  .b-quilter { background: #ffedd5; color: #9a3412; }
+  .b-fidelity { background: #fce7f3; color: #9d174d; }
+  .b-7im { background: #d1fae5; color: #065f46; }
+  .b-sw { background: #f1f0ea; color: #3b3a36; }
+  .b-abrdn { background: #ede9fe; color: #4c1d95; }
+  .b-nucleus { background: #fef9c3; color: #713f12; }
+  .b-fundment { background: #e0f2fe; color: #0369a1; }
+  .b-unknown { background: var(--surface2); color: var(--text3); }
+  .b-new { background: #fee2e2; color: #991b1b; }
+  .b-recur { background: #fef3c7; color: #92400e; }
+  .cat-badge { display: inline-block; font-size: 10px; font-weight: 500; padding: 2px 8px; border-radius: 99px; white-space: nowrap; }
+
+  /* FORMS */
+  input[type=text], input[type=email], select, textarea {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    padding: 8px 12px;
+    border: 0.5px solid var(--border-med);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--text);
+    outline: none;
+    transition: border-color .15s;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--text); }
+  textarea { resize: vertical; width: 100%; }
+
+  /* BUTTONS */
+  button {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 0.5px solid var(--border-med);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    transition: background .15s;
+  }
+  button:hover { background: var(--surface2); }
+  button.primary {
+    background: var(--text);
+    color: #fff;
+    border-color: var(--text);
+  }
+  button.primary:hover { background: #333; }
+  button.danger { color: #dc2626; }
+
+  /* UPLOAD AREA */
+  .upload-area {
+    border: 1.5px dashed var(--border-med);
+    border-radius: var(--radius);
+    padding: 28px;
+    text-align: center;
+    cursor: pointer;
+    color: var(--text2);
+    transition: border-color .15s, background .15s;
+    margin-bottom: 14px;
+  }
+  .upload-area:hover { border-color: var(--text); background: var(--surface2); }
+  .upload-title { font-size: 15px; font-weight: 500; margin-bottom: 4px; }
+  .upload-sub { font-size: 12px; color: var(--text3); }
+
+  /* STATUS */
+  .status-ok { background: #f0fdf4; color: #15803d; border: 0.5px solid #bbf7d0; font-size: 13px; padding: 10px 14px; border-radius: 8px; margin-bottom: 12px; }
+  .status-warn { background: #fffbeb; color: #b45309; border: 0.5px solid #fde68a; font-size: 13px; padding: 10px 14px; border-radius: 8px; margin-bottom: 12px; }
+
+  /* BARS */
+  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .bar-label { width: 130px; font-size: 12px; color: var(--text2); text-align: right; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar-track { flex: 1; background: var(--surface2); border-radius: 99px; height: 7px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 99px; transition: width .4s ease; }
+  .bar-count { width: 32px; font-size: 12px; font-weight: 500; text-align: right; }
+
+  /* FILTERS */
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; align-items: center; }
+  .cat-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+  .cat-chip { padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 500; cursor: pointer; border: 1.5px solid transparent; transition: border-color .15s; }
+  .cat-chip.active { border-width: 1.5px; }
+
+  /* ACCOUNT CARD */
+  .acct-card { background: var(--surface); border: 0.5px solid var(--border-med); border-radius: var(--radius-lg); padding: 18px 20px; margin-bottom: 10px; }
+  .timeline-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; margin-top: 3px; }
+  .timeline-line { width: 1px; background: var(--border-med); margin: 0 4px; flex-grow: 1; min-height: 16px; }
+  .id-pill { display: inline-block; font-family: 'DM Mono', monospace; font-size: 11px; padding: 2px 7px; border-radius: 99px; background: var(--surface2); color: var(--text2); }
+  .initials-circle { width: 38px; height: 38px; border-radius: 50%; background: #dbeafe; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 13px; color: #1e40af; flex-shrink: 0; }
+  .user-avatar { border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; flex-shrink: 0; }
+
+  .search-big { font-size: 15px; padding: 12px 16px; width: 100%; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--surface); color: var(--text); font-family: 'DM Sans', sans-serif; margin-bottom: 16px; }
+  .search-big:focus { outline: none; border-color: var(--text); }
+
+  /* ADMIN */
+  .admin-hero { background: var(--text); color: #fff; border-radius: var(--radius-lg); padding: 22px 24px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; }
+  .admin-hero-title { font-size: 16px; font-weight: 600; }
+  .admin-hero-sub { font-size: 12px; opacity: .6; margin-top: 3px; }
+  .tab-row { display: flex; gap: 2px; margin-bottom: 16px; border-bottom: 0.5px solid var(--border-med); }
+  .tab { padding: 8px 16px; font-size: 13px; cursor: pointer; border: none; background: none; color: var(--text2); border-bottom: 2px solid transparent; margin-bottom: -1px; font-family: 'DM Sans', sans-serif; font-weight: 400; transition: color .15s; }
+  .tab.active { color: var(--text); font-weight: 500; border-bottom-color: var(--text); }
+  .user-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 0.5px solid var(--border); }
+  .user-row:last-child { border-bottom: none; }
+  .platform-pill { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 99px; background: var(--surface2); color: var(--text2); margin: 2px; }
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 200; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--surface); border-radius: var(--radius-lg); padding: 24px; width: 380px; max-width: 90vw; box-shadow: 0 20px 60px rgba(0,0,0,.15); }
+  .modal-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+  .form-label { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--text3); margin-bottom: 5px; display: block; }
+  .form-group { margin-bottom: 12px; }
+
+  .empty { color: var(--text3); font-size: 13px; text-align: center; padding: 32px; }
+
+  /* MONO */
+  .mono { font-family: 'DM Mono', monospace; }
+
+  @media (max-width: 900px) {
+    .sidebar { width: 56px; }
+    .sidebar-logo, .nav-section-label, .nav-item span, .sidebar-footer { display: none; }
+    .nav-item { justify-content: center; padding: 10px; }
+    .main { margin-left: 56px; padding: 20px; }
+    .metrics { grid-template-columns: 1fr 1fr; }
+    .grid3 { grid-template-columns: 1fr; }
+    .grid2 { grid-template-columns: 1fr; }
+  }
+
+  /* SORTABLE */
+  th.sortable{cursor:pointer;user-select:none;white-space:nowrap}
+  th.sortable:hover{color:var(--text)}
+  th.sortable .si{display:inline-block;margin-left:4px;opacity:.4;font-size:10px}
+  th.sortable.sort-asc .si::after{content:'▲';opacity:1}
+  th.sortable.sort-desc .si::after{content:'▼';opacity:1}
+  th.sortable:not(.sort-asc):not(.sort-desc) .si::after{content:'⇅'}
+  /* RESOLVED */
+  .rcb{width:17px;height:17px;cursor:pointer;accent-color:#16a34a}
+  .st-open{background:var(--surface2);color:var(--text3);font-size:10px;font-weight:600;padding:2px 8px;border-radius:99px;white-space:nowrap}
+  .st-pending{background:#fef9c3;color:#854d0e;font-size:10px;font-weight:600;padding:2px 8px;border-radius:99px;white-space:nowrap}
+  tr.is-res td{opacity:.55}
+  tr.is-res td:last-child,tr.is-res td:nth-last-child(2){opacity:1}
+  /* COLUMN TOGGLES */
+  .col-bar{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;align-items:center}
+  .col-tog{display:inline-flex;align-items:center;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:500;cursor:pointer;border:1px solid var(--border-med);background:var(--surface);color:var(--text2);user-select:none;transition:all .15s}
+  .col-tog.on{background:var(--text);color:#fff;border-color:var(--text)}
+  /* FILTER GRID */
+  .fgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;margin-bottom:12px}
+  .fgrid label{display:block;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:4px}
+  .fgrid select,.fgrid input{width:100%}
+
+
+  /* RECONCILIATION */
+  .ru{border:1.5px dashed var(--border-med);border-radius:var(--radius);padding:22px;text-align:center;cursor:pointer;color:var(--text2);transition:border-color .15s,background .15s}
+  .ru:hover{border-color:var(--text);background:var(--surface2)}
+  .ru.ok{border-style:solid;border-color:#16a34a;background:#f0fdf4}
+  .ru.ok .rs{color:#16a34a}
+  .ru .rt{font-size:13px;font-weight:600;margin-bottom:3px}
+  .ru .rs{font-size:11px;color:var(--text3)}
+  .fmr{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .fml{font-size:12px;font-weight:500;color:var(--text2);width:110px;flex-shrink:0}
+  .st-matched{background:#dcfce7;color:#166534;font-size:10px;font-weight:600;padding:2px 8px;border-radius:99px;white-space:nowrap}
+  .st-errored{background:#fef9c3;color:#854d0e;font-size:10px;font-weight:600;padding:2px 8px;border-radius:99px;white-space:nowrap}
+  .st-missing{background:#fee2e2;color:#991b1b;font-size:10px;font-weight:600;padding:2px 8px;border-radius:99px;white-space:nowrap}
+  .rmets{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}
+  .rmet{background:var(--surface);border:0.5px solid var(--border-med);border-radius:var(--radius);padding:14px 16px}
+  .rmet-l{font-size:11px;color:var(--text3);font-weight:500;margin-bottom:6px}
+  .rmet-v{font-size:26px;font-weight:600;letter-spacing:-.02em}
+  .ptrack{background:var(--surface2);border-radius:99px;height:8px;overflow:hidden;margin-top:8px}
+  .pfill{height:100%;border-radius:99px;transition:width .5s ease}
+
+
+  /* AUTH SCREEN */
+  .auth-screen{position:fixed;inset:0;background:#f5f4f1;display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:0}
+  .auth-card{background:#fff;border-radius:16px;border:0.5px solid rgba(0,0,0,.1);padding:40px 44px;width:360px;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,.08)}
+  .auth-logo{font-size:13px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:6px}
+  .auth-title{font-size:22px;font-weight:600;color:var(--text);margin-bottom:6px}
+  .auth-sub{font-size:13px;color:var(--text2);margin-bottom:28px;line-height:1.5}
+  .auth-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:12px 20px;border-radius:10px;border:1px solid rgba(0,0,0,.15);background:#fff;font-size:14px;font-weight:500;cursor:pointer;color:#1a1917;transition:background .15s,box-shadow .15s;font-family:inherit}
+  .auth-btn:hover{background:#f8f8f8;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+  .auth-btn svg{width:20px;height:20px;flex-shrink:0}
+  .auth-domain{display:inline-block;margin-top:20px;font-size:11px;color:var(--text3);background:var(--surface2);padding:4px 10px;border-radius:99px}
+  .auth-error{margin-top:14px;font-size:12px;color:#dc2626;background:#fee2e2;padding:8px 12px;border-radius:8px;display:none}
+  .user-bar{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface);border-bottom:0.5px solid var(--border-med);font-size:12px;color:var(--text2)}
+  .task-card{background:var(--surface);border:0.5px solid var(--border-med);border-radius:var(--radius-lg);padding:16px 18px;margin-bottom:10px;transition:opacity .2s}
+  .task-card.task-done{opacity:.55}
+  .assign-sel{font-size:12px;padding:3px 6px;border-radius:6px;border:0.5px solid var(--border-med);background:var(--surface);color:var(--text);width:100%;max-width:140px}
+  .assign-sel:focus{outline:none;border-color:var(--accent)}
+
+  /* ACCOUNT DETAIL PANEL */
+  .acct-panel-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:300;display:none;align-items:flex-start;justify-content:flex-end}
+  .acct-panel-overlay.open{display:flex}
+  .acct-panel{background:var(--surface);width:520px;max-width:95vw;height:100vh;overflow-y:auto;display:flex;flex-direction:column;box-shadow:-8px 0 40px rgba(0,0,0,.15)}
+  .acct-panel-head{padding:22px 24px 18px;border-bottom:0.5px solid var(--border-med);position:sticky;top:0;background:var(--surface);z-index:10}
+  .acct-panel-close{position:absolute;top:18px;right:20px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3);line-height:1;padding:4px 8px;border-radius:6px}
+  .acct-panel-close:hover{background:var(--surface2);color:var(--text)}
+  .acct-panel-body{padding:20px 24px;flex:1}
+  .acct-panel-section{margin-bottom:28px}
+  .acct-panel-section-title{font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--text3);margin-bottom:12px;padding-bottom:6px;border-bottom:0.5px solid var(--border)}
+  .audit-row{display:flex;gap:12px;margin-bottom:0}
+  .audit-line-col{display:flex;flex-direction:column;align-items:center;width:28px;flex-shrink:0}
+  .audit-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:3px}
+  .audit-line{width:1.5px;background:var(--border-med);flex:1;min-height:12px;margin:3px 0}
+  .audit-content{flex:1;padding-bottom:16px;min-width:0}
+  .audit-event-label{font-size:11px;font-weight:600;letter-spacing:.03em}
+  .audit-event-meta{font-size:11px;color:var(--text3);margin-top:1px}
+  .audit-event-body{margin-top:6px;font-size:12px;color:var(--text2);line-height:1.5}
+  .audit-note-bubble{background:var(--surface2);border-left:3px solid var(--border-med);padding:6px 10px;border-radius:0 6px 6px 0;margin-top:6px;font-size:12px;color:var(--text2);font-style:italic}
+  .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .info-cell{background:var(--surface2);border-radius:8px;padding:10px 12px}
+  .info-cell-label{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--text3);margin-bottom:4px}
+  .info-cell-value{font-size:13px;font-weight:500;color:var(--text)}
+  .user-bar img{width:26px;height:26px;border-radius:50%;object-fit:cover}
+  .user-bar .user-name{font-weight:500;color:var(--text);flex:1}
+  .user-bar .sign-out{cursor:pointer;color:var(--text3);font-size:11px;padding:4px 10px;border-radius:6px;border:0.5px solid var(--border-med);background:none;font-family:inherit}
+  .user-bar .sign-out:hover{background:var(--surface2)}
+  .reappear-banner{background:#fef2f2;border-bottom:1.5px solid #fecaca;padding:10px 20px;display:none;align-items:center;gap:12px;font-size:13px;color:#991b1b;position:sticky;top:45px;z-index:90}
+  .reappear-banner.show{display:flex}
+  .reappear-banner-title{font-weight:600;flex-shrink:0}
+  .reappear-banner-list{flex:1;display:flex;flex-wrap:wrap;gap:6px}
+  .reappear-banner-chip{background:#fee2e2;color:#991b1b;font-size:11px;font-weight:500;padding:2px 8px;border-radius:99px;cursor:pointer;white-space:nowrap}
+  .reappear-banner-chip:hover{background:#fecaca}
+  .reappear-banner-dismiss{font-size:11px;color:#b91c1c;cursor:pointer;padding:3px 8px;border-radius:6px;border:0.5px solid #fecaca;background:none;white-space:nowrap;font-family:inherit}
+  .reappear-banner-dismiss:hover{background:#fee2e2}
+  /* PLATFORM TRACKER */
+  .plat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-top:4px}
+  .plat-card{background:var(--surface);border:0.5px solid var(--border-med);border-radius:var(--radius);padding:14px 16px;position:relative}
+  .plat-card.status-done{border-left:3px solid #16a34a}
+  .plat-card.status-due{border-left:3px solid #d97706}
+  .plat-card.status-overdue{border-left:3px solid #dc2626}
+  .plat-card.status-never{border-left:3px solid var(--border-med)}
+  .plat-status-pill{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px;margin-bottom:6px}
+  .plat-status-pill.done{background:#dcfce7;color:#166534}
+  .plat-status-pill.due{background:#fef3c7;color:#92400e}
+  .plat-status-pill.overdue{background:#fee2e2;color:#991b1b}
+  .plat-status-pill.never{background:var(--surface2);color:var(--text3)}
+  .plat-assign-row{display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap}
+  /* LINK ACCOUNT MODAL */
+  .link-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;display:none;align-items:center;justify-content:center}
+  .link-modal-overlay.open{display:flex}
+  .link-modal{background:#fff;border-radius:16px;padding:32px 36px;width:400px;max-width:92vw;box-shadow:0 20px 60px rgba(0,0,0,.2);text-align:center}
+  .link-modal-title{font-size:18px;font-weight:600;margin-bottom:6px}
+  .link-modal-sub{font-size:13px;color:var(--text2);margin-bottom:24px;line-height:1.5}
+  .link-member-btn{display:flex;align-items:center;gap:12px;width:100%;padding:10px 14px;border-radius:10px;border:0.5px solid var(--border-med);background:var(--surface);margin-bottom:8px;cursor:pointer;transition:background .15s,border-color .15s;text-align:left}
+  .link-member-btn:hover{background:var(--surface2);border-color:var(--text)}
+  .link-member-btn.selected{border-color:var(--text);background:#f0f0ee}
+  .link-member-name{font-weight:500;font-size:14px}
+  .link-member-role{font-size:12px;color:var(--text3)}
+
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<!-- AUTH SCREEN -->
+<div class="auth-screen" id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">Bulk Import</div>
+    <div class="auth-title">Error Dashboard</div>
+    <div class="auth-sub">Sign in with your Timeline Google account to continue.</div>
+    <button class="auth-btn" onclick="signInWithGoogle()">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      </svg>
+      Sign in with Google
+    </button>
+    <div class="auth-domain">@timeline.co accounts only</div>
+    <div class="auth-error" id="auth-error">Access restricted to @timeline.co accounts only.</div>
+  </div>
+</div>
+
+<!-- USER BAR (shown when logged in) -->
+<div id="user-bar" style="display:none" class="user-bar">
+  <img id="user-avatar" src="" alt="" onerror="this.style.display='none'">
+  <span class="user-name" id="user-name"></span>
+  <span id="user-linked-name" style="font-size:11px;color:var(--text3);background:var(--surface2);padding:3px 8px;border-radius:99px;display:none"></span>
+  <button class="sign-out" onclick="showLinkModal(true)" id="link-account-btn" style="display:none">Change</button>
+  <button class="sign-out" onclick="showLinkModal(false)" id="link-account-prompt" style="display:none;color:#d97706;border-color:#d97706">Link your account →</button>
+  <span id="sync-indicator" style="font-size:11px;color:var(--text3);margin-left:4px">● live</span>
+  <button class="sign-out" onclick="signOut()">Sign out</button>
+</div>
+
+<div class="app" id="main-app" style="display:none">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">Error tracker</div>
+      <div class="logo-title">Bulk Import<br>Dashboard</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <button class="nav-item" onclick="switchView('mytasks')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        <span>My tasks</span><span id="my-tasks-badge" style="display:none;margin-left:auto;background:#dc2626;color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:99px;line-height:1.6"></span>
+      </button>
+      <button class="nav-item" onclick="switchView('reappeared')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span>Recurring errors</span><span id="reappear-nav-badge" style="display:none;margin-left:auto;background:#dc2626;color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:99px;line-height:1.6"></span>
+      </button>
+      <button class="nav-item active" onclick="switchView('overview')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        <span>Overview</span>
+      </button>
+      <button class="nav-item" onclick="switchView('upload')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <span>Upload report</span>
+      </button>
+      <button class="nav-item" onclick="switchView('errors')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span>Error log</span>
+      </button>
+      <button class="nav-item" onclick="switchView('search')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <span>Account lookup</span>
+      </button>
+      <div class="nav-section-label">Records</div>
+      <button class="nav-item" onclick="switchView('history')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="12 8 12 12 14 14"/><path d="M3.05 11a9 9 0 1 0 .5-3"/><polyline points="3 4 3 11 10 11"/></svg>
+        <span>Report history</span>
+      </button>
+      <button class="nav-item" onclick="switchView('platforms')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        <span>Platform IDs</span>
+      </button>
+      <div class="nav-section-label">Tools</div>
+      <button class="nav-item" onclick="switchView('reconcile')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/></svg>
+        <span>Reconcile</span>
+      </button>
+      <div class="nav-section-label">Settings</div>
+      <button class="nav-item" onclick="switchView('admin')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        <span>Admin</span>
+      </button>
+    </nav>
+    <div class="sidebar-footer">v1.0 &nbsp;·&nbsp; 11 platforms</div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- MY TASKS -->
+    <div id="view-mytasks" class="view">
+      <div class="page-header">
+        <div class="page-title">My tasks</div>
+        <div class="page-sub">Errors assigned to you — resolve them as you fix each one</div>
+      </div>
+      <div id="mytasks-empty" class="card" style="display:none"><div class="empty">No errors are assigned to you right now.</div></div>
+      <div id="mytasks-content"></div>
+    </div>
+
+    <!-- RECURRING ERRORS -->
+    <div id="view-reappeared" class="view">
+      <div class="page-header">
+        <div class="page-title">Recurring errors</div>
+        <div class="page-sub">Errors that were marked as resolved but have reappeared in a later report</div>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <select id="re-filter-platform" onchange="renderReappeared()" style="font-size:12px"><option value="">All platforms</option></select>
+          <select id="re-filter-cat" onchange="renderReappeared()" style="font-size:12px"><option value="">All categories</option></select>
+          <select id="re-filter-status" onchange="renderReappeared()" style="font-size:12px">
+            <option value="">All statuses</option>
+            <option value="open">Still open</option>
+            <option value="resolved">Re-resolved</option>
+          </select>
+          <input type="text" id="re-filter-search" placeholder="Search client, adviser, firm..." oninput="renderReappeared()" style="font-size:12px;flex:1;min-width:180px">
+          <span id="re-summary" style="font-size:12px;color:var(--text3);margin-left:auto"></span>
+        </div>
+      </div>
+      <div id="re-empty" class="card" style="display:none"><div class="empty">No recurring errors found — resolved errors that reappear in future reports will show here.</div></div>
+      <div id="re-content"></div>
+    </div>
+
+    <!-- OVERVIEW -->
+    <div id="view-overview" class="view active">
+      <div class="page-header">
+        <div class="page-title">Overview</div>
+        <div class="page-sub">All uploaded reports and errors at a glance</div>
+      </div>
+      <div class="metrics" style="grid-template-columns:repeat(6,minmax(0,1fr))">
+        <div class="metric"><div class="metric-label">Actionable errors</div><div class="metric-value" id="ov-total">0</div><div style="font-size:10px;color:var(--text3);margin-top:4px">Excl. low balance</div></div>
+        <div class="metric"><div class="metric-label">Outstanding</div><div class="metric-value" style="color:#dc2626" id="ov-outstanding">0</div><div style="font-size:10px;color:var(--text3);margin-top:4px">Not yet resolved</div></div>
+        <div class="metric"><div class="metric-label">Resolved</div><div class="metric-value" style="color:#16a34a" id="ov-resolved">0</div><div style="font-size:10px;color:var(--text3);margin-top:4px">Pending next import</div></div>
+        <div class="metric"><div class="metric-label">Low balance</div><div class="metric-value" style="color:var(--text3)" id="ov-lowbal">0</div><div style="font-size:10px;color:var(--text3);margin-top:4px">Expected — not tracked</div></div>
+        <div class="metric"><div class="metric-label">Platforms updated</div><div class="metric-value" id="ov-plat-count">0</div><div style="font-size:10px;color:var(--text3);margin-top:4px" id="ov-plat-sub">this month</div></div>
+        <div class="metric"><div class="metric-label">Recurring accounts</div><div class="metric-value amber" id="ov-recurring">0</div></div>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">Platform upload tracker — <span id="ov-plat-month"></span></div>
+        <div class="plat-grid" id="ov-plat-grid"></div>
+      </div>
+      <div class="grid3">
+        <div class="card"><div class="card-title">By platform</div><div id="ov-platform-bars"><div class="empty">No data yet</div></div></div>
+        <div class="card"><div class="card-title">By error category</div><div id="ov-cat-bars"><div class="empty">No data yet</div></div></div>
+        <div class="card"><div class="card-title">By resolution type</div><div id="ov-res-bars"><div class="empty">No data yet</div></div></div>
+      </div>
+      <div class="card"><div class="card-title">Top recurring accounts</div><div id="ov-recurring-list"><div class="empty">No data yet</div></div></div>
+      <div class="card"><div class="card-title">Recent errors</div><div id="ov-recent"><div class="empty">Upload a report to see errors here</div></div></div>
+    </div>
+
+    <!-- UPLOAD -->
+    <div id="view-upload" class="view">
+      <div class="page-header"><div class="page-title">Upload report</div><div class="page-sub">Each error is automatically tagged with its category and resolution type</div></div>
+      <div class="card">
+        <div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+          <div style="flex:1;min-width:180px">
+            <label class="form-label">Uploaded by</label>
+            <select id="uploader-select" style="width:100%"><option value="">Select team member...</option></select>
+          </div>
+          <div style="flex:2;min-width:200px">
+            <label class="form-label">Report label</label>
+            <input type="text" id="report-label" placeholder="e.g. March 2026 — Aviva" style="width:100%">
+          </div>
+        </div>
+        <div class="upload-area" onclick="document.getElementById('fileIn').click()">
+          <div class="upload-title">Drop .txt error report here</div>
+          <div class="upload-sub">or click to browse your files</div>
+          <input type="file" id="fileIn" accept=".txt" style="display:none">
+        </div>
+        <label class="form-label">Or paste report text</label>
+        <textarea id="paste-area" rows="6" placeholder="Paste error report text here..." style="margin-bottom:12px"></textarea>
+        <div style="display:flex;gap:8px">
+          <button onclick="loadSample()">Load sample</button>
+          <button class="primary" onclick="parseAndStore()">Store report</button>
+        </div>
+        <div id="upload-status" style="margin-top:12px"></div>
+      </div>
+    </div>
+
+    <!-- ERROR LOG -->
+    <div id="view-errors" class="view">
+      <div class="page-header"><div class="page-title">Error log</div><div class="page-sub">Filter, search and export errors across all reports</div></div>
+      <div class="card">
+        <div class="cat-chips" id="cat-filter-chips"></div>
+        <div class="fgrid">
+          <div><label>Platform</label><select id="fp" onchange="pf();renderErrorLog()"><option value="">All platforms</option></select></div>
+          <div><label>Error category</label><select id="fc" onchange="pf();renderErrorLog()"><option value="">All categories</option></select></div>
+          <div><label>Resolution</label><select id="fr" onchange="renderErrorLog()"><option value="">All types</option><option value="auto">Auto-resolvable</option><option value="manual">Manual fix</option><option value="review">Needs review</option></select></div>
+          <div><label>Status</label><select id="fst" onchange="renderErrorLog()"><option value="">All statuses</option><option value="open">Open</option><option value="resolved">Pending next import</option></select></div>
+          <div><label>Report</label><select id="frep" onchange="pf();renderErrorLog()"><option value="">All reports</option></select></div>
+          <div><label>Firm</label><select id="ffi" onchange="pf();renderErrorLog()"><option value="">All firms</option></select></div>
+          <div><label>Adviser</label><select id="fad" onchange="pf();renderErrorLog()"><option value="">All advisers</option></select></div>
+          <div><label>Client</label><select id="fcl" onchange="renderErrorLog()"><option value="">All clients</option></select></div>
+          <div><label>Assigned to</label><select id="fasgn" onchange="renderErrorLog()"><option value="">All</option><option value="__unassigned__">Unassigned</option></select></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <input type="text" id="filter-search" placeholder="Free text search..." oninput="renderErrorLog()" style="flex:1">
+          <button onclick="clearFilters()" style="font-size:12px;color:var(--text2)">Clear all</button>
+        </div>
+        <div class="col-bar">
+          <span style="font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-right:4px">Columns</span>
+          <span class="col-tog on" data-col="0" onclick="togCol(this)">Category</span>
+          <span class="col-tog on" data-col="1" onclick="togCol(this)">Platform</span>
+          <span class="col-tog on" data-col="2" onclick="togCol(this)">Account ID</span>
+          <span class="col-tog on" data-col="3" onclick="togCol(this)">Client</span>
+          <span class="col-tog on" data-col="4" onclick="togCol(this)">Adviser</span>
+          <span class="col-tog on" data-col="5" onclick="togCol(this)">Firm</span>
+          <span class="col-tog on" data-col="6" onclick="togCol(this)">Report</span>
+          <span class="col-tog on" data-col="7" onclick="togCol(this)">Error</span>
+          <span class="col-tog on" data-col="8" onclick="togCol(this)">Assigned to</span>
+          <span class="col-tog on" data-col="9" onclick="togCol(this)">Notes</span>
+        </div>
+        <div style="overflow-x:auto">
+          <table id="elt">
+            <thead><tr>
+              <th class="sortable" data-key="category" onclick="sortEL(this)">Category<span class="si"></span></th>
+              <th class="sortable" data-key="platform" onclick="sortEL(this)">Platform<span class="si"></span></th>
+              <th class="sortable" data-key="accountId" onclick="sortEL(this)">Account ID<span class="si"></span></th>
+              <th class="sortable" data-key="client" onclick="sortEL(this)">Client<span class="si"></span></th>
+              <th class="sortable" data-key="adviser" onclick="sortEL(this)">Adviser<span class="si"></span></th>
+              <th class="sortable" data-key="firm" onclick="sortEL(this)">Firm<span class="si"></span></th>
+              <th class="sortable" data-key="reportLabel" onclick="sortEL(this)">Report<span class="si"></span></th>
+              <th class="sortable" data-key="error" onclick="sortEL(this)" style="min-width:340px">Error<span class="si"></span></th>
+              <th>Assigned to</th><th>Notes</th><th>Status</th><th>Resolved</th>
+            </tr></thead>
+            <tbody id="error-log-body"></tbody>
+          </table>
+        </div>
+        <div id="error-log-empty" class="empty" style="display:none">No matching errors</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px">
+          <div style="display:flex;align-items:center;gap:6px">
+            <button id="el-prev" onclick="elChangePage(-1)" style="font-size:12px;padding:5px 12px;display:none">← Prev</button>
+            <div id="el-page-pills" style="display:flex;gap:4px"></div>
+            <button id="el-next" onclick="elChangePage(1)" style="font-size:12px;padding:5px 12px;display:none">Next →</button>
+          </div>
+          <div id="error-log-count" style="font-size:12px;color:var(--text3)"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SEARCH -->
+    <div id="view-search" class="view">
+      <div class="page-header"><div class="page-title">Account lookup</div><div class="page-sub">Search by account ID, client ID, client name or adviser</div></div>
+      <input class="search-big" id="acct-search" placeholder="e.g. DM2307582 or Sarah Johnson..." oninput="renderAccountSearch()">
+      <div id="acct-results"><div class="empty">Type above to search the error history database</div></div>
+    </div>
+
+    <!-- HISTORY -->
+    <div id="view-history" class="view">
+      <div class="page-header"><div class="page-title">Report history</div><div class="page-sub">All uploaded reports with uploader and error counts</div></div>
+      <div class="card"><div id="history-list"><div class="empty">No reports uploaded yet</div></div></div>
+    </div>
+
+    <!-- PLATFORMS -->
+    <div id="view-platforms" class="view">
+      <div class="page-header"><div class="page-title">Platform IDs</div><div class="page-sub">Account and client ID formats for all 11 platforms</div></div>
+      <div class="card">
+        <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Platform</th><th>Account ID</th><th>Client ID</th><th>Example account</th><th>Example client</th></tr></thead>
+          <tbody>
+            <tr><td><span class="badge b-nucleus">Nucleus</span></td><td class="mono" style="font-size:12px">N + 6 digits</td><td class="mono" style="font-size:12px">9-digit (1XXXXXXXX)</td><td class="mono" style="font-size:12px">N349632</td><td class="mono" style="font-size:12px">100258616</td></tr>
+            <tr><td><span class="badge b-aviva">Aviva</span></td><td class="mono" style="font-size:12px">DM + 7 digits</td><td class="mono" style="font-size:12px">AV + 7 digits</td><td class="mono" style="font-size:12px">DM2307582</td><td class="mono" style="font-size:12px">AV2931060</td></tr>
+            <tr><td><span class="badge b-quilter">Quilter</span></td><td class="mono" style="font-size:12px">DM + 7 digits</td><td class="mono" style="font-size:12px">AC + 7 digits</td><td class="mono" style="font-size:12px">DM3019422</td><td class="mono" style="font-size:12px">AC2776919</td></tr>
+            <tr><td><span class="badge b-sw">Scottish Widows</span></td><td class="mono" style="font-size:12px">DM + 7 digits</td><td class="mono" style="font-size:12px">EM + 7 digits</td><td class="mono" style="font-size:12px">DM1429368</td><td class="mono" style="font-size:12px">EM1694701</td></tr>
+            <tr><td><span class="badge b-abrdn">ABRDN</span></td><td class="mono" style="font-size:12px">DM + 7 digits</td><td class="mono" style="font-size:12px">WP + 7 digits</td><td class="mono" style="font-size:12px">DM1464768</td><td class="mono" style="font-size:12px">WP1842510</td></tr>
+            <tr><td><span class="badge b-fidelity">Fidelity</span></td><td class="mono" style="font-size:12px">AG/AS + 8d · 10 digits</td><td class="mono" style="font-size:12px">FID + 8 alphanum</td><td class="mono" style="font-size:12px">AG10070195</td><td class="mono" style="font-size:12px">FID9ZmxbFVO</td></tr>
+            <tr><td><span class="badge b-7im">7IM</span></td><td class="mono" style="font-size:12px">IMF + 5 alphanum + D</td><td class="mono" style="font-size:12px">Title + name (display)</td><td class="mono" style="font-size:12px">IMF7GH3X D</td><td>—</td></tr>
+            <tr><td><span class="badge b-tp">True Potential</span></td><td class="mono" style="font-size:12px">P + 4d-5d-5d</td><td class="mono" style="font-size:12px">UUID</td><td class="mono" style="font-size:12px">P0749-30004-03556</td><td class="mono" style="font-size:12px">2588147a-...</td></tr>
+            <tr><td><span class="badge b-transact">Transact</span></td><td class="mono" style="font-size:12px">IH + 8 digits</td><td class="mono" style="font-size:12px">NNN-NNN-NNN</td><td class="mono" style="font-size:12px">IH00840082</td><td class="mono" style="font-size:12px">801-908-589</td></tr>
+            <tr><td><span class="badge b-wealthtime">Wealthtime</span></td><td class="mono" style="font-size:12px">digits, 1–5</td><td class="mono" style="font-size:12px">digits, 1–5</td><td class="mono" style="font-size:12px">23831</td><td class="mono" style="font-size:12px">13848</td></tr>
+          </tbody>
+        </table>
+        </div>
+        <div style="margin-top:16px;padding:14px;background:var(--surface2);border-radius:8px;font-size:12px;color:var(--text2)">
+          Four platforms share the <span class="mono">DM</span> account prefix: Aviva (<span class="mono">AV</span>), Quilter (<span class="mono">AC</span>), Scottish Widows (<span class="mono">EM</span>), ABRDN (<span class="mono">WP</span>). The client ID resolves which platform a DM account belongs to.
+        </div>
+        <div style="margin-top:16px">
+          <label class="form-label">Test an ID</label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="text" id="test-id" placeholder="e.g. WP1842510 or N349632" style="flex:1" oninput="testPlatform()">
+            <div id="test-result" style="font-size:13px;min-width:220px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- RECONCILE -->
+    <div id="view-reconcile" class="view">
+      <div class="page-header">
+        <div class="page-title">Reconciliation</div>
+        <div class="page-sub">Upload a platform client export and match it against your internal dashboard to find missing accounts and silent gaps</div>
+      </div>
+
+      <div class="card" id="rs1">
+        <div class="card-title">Step 1 — Upload both files</div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:16px">Upload your internal dashboard export and the platform client list. Both are needed to run the reconciliation.</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <div>
+            <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:6px">Internal dashboard export</div>
+            <div class="ru" id="ri-box" onclick="document.getElementById('ri-inp').click()">
+              <div class="rt">Drop .xlsx or .csv here</div>
+              <div class="rs" id="ri-lbl">Your Accounts export file</div>
+            </div>
+            <input type="file" id="ri-inp" accept=".xlsx,.csv" style="display:none" onchange="loadInternalFile(this)">
+          </div>
+          <div>
+            <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:6px">Platform client export</div>
+            <div class="ru" id="ru-box" onclick="document.getElementById('ru-inp').click()">
+              <div class="rt">Drop .xlsx or .csv here</div>
+              <div class="rs" id="ru-lbl">e.g. Transact template report</div>
+            </div>
+            <input type="file" id="ru-inp" accept=".xlsx,.csv" style="display:none" onchange="loadPlatFile(this)">
+          </div>
+        </div>
+      </div>
+      <div class="card" id="rs2" style="display:none">
+        <div class="card-title">Step 2 — Map columns &amp; select platform</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:14px">
+          <div>
+            <div class="fmr"><span class="fml">Client name col</span><select id="rm-name" style="flex:1"><option value="">select column</option></select></div>
+            <div class="fmr"><span class="fml">Account ID col</span><select id="rm-id" style="flex:1"><option value="">optional</option></select></div>
+          </div>
+          <div>
+            <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:6px">Platform</div>
+            <select id="rm-plat" style="width:100%">
+              <option value="">All platforms</option>
+              <option value="Aviva">Aviva</option>
+              <option value="Quilter">Quilter</option>
+              <option value="Scottish Widows">Scottish Widows</option>
+              <option value="ABRDN">ABRDN</option>
+              <option value="Fidelity">Fidelity</option>
+              <option value="7IM">7IM</option>
+              <option value="True Potential">True Potential</option>
+              <option value="Transact">Transact</option>
+              <option value="Wealthtime">Wealthtime</option>
+              <option value="Nucleus">Nucleus</option>
+              <option value="Fundment">Fundment</option>
+            </select>
+            <div style="font-size:11px;color:var(--text3);margin-top:5px">Scopes matching to this platform in the internal dashboard</div>
+          </div>
+        </div>
+        <button class="primary" onclick="runRecon()">Run reconciliation</button>
+      </div>
+      <div id="rs3" style="display:none">
+        <div class="rmets" id="rmet-cards"></div>
+        <div class="ptrack"><div class="pfill" id="r-pfill" style="background:#16a34a;width:0%"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-top:4px;margin-bottom:14px">
+          <span id="r-plbl-l"></span><span id="r-plbl-r"></span>
+        </div>
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+            <div class="card-title" style="margin:0">Results</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+              <select id="rf-st" onchange="renderReconTbl()" style="font-size:12px">
+                <option value="">All statuses</option>
+                <option value="matched">Matched</option>
+                <option value="errored">Error reported</option>
+                <option value="missing">Missing &amp; silent</option>
+              </select>
+              <input type="text" id="rf-q" placeholder="Search client..." oninput="renderReconTbl()" style="width:160px;font-size:12px">
+              <button onclick="exportReconCSV()" style="font-size:12px;padding:6px 12px">Export CSV</button>
+            </div>
+          </div>
+          <div style="overflow-x:auto">
+            <table><thead><tr>
+              <th>Platform client</th><th>Account ID</th><th>Status</th>
+              <th>In dashboard</th><th>Error report entry</th><th>Category</th>
+            </tr></thead><tbody id="r-tbody"></tbody></table>
+          </div>
+          <div id="r-empty" class="empty" style="display:none">No results match the filter</div>
+          <div id="r-count" style="font-size:12px;color:var(--text3);margin-top:8px;text-align:right"></div>
+        </div>
+        <div style="margin-top:8px;text-align:right">
+          <button onclick="resetRecon()" style="font-size:12px;color:var(--text2)">Start new reconciliation</button>
+        </div>
+      </div>
+    </div>
+    <!-- ADMIN -->
+    <div id="view-admin" class="view">
+      <div class="admin-hero">
+        <div>
+          <div class="admin-hero-title">Admin panel</div>
+          <div class="admin-hero-sub">Manage team members and track upload activity</div>
+        </div>
+        <button onclick="showAddUserModal()" style="background:#fff;color:#1a1917;border-color:#fff;font-weight:500">+ Add team member</button>
+      </div>
+      <div class="tab-row">
+        <button class="tab active" onclick="adminTab('log',this)">Upload log</button>
+        <button class="tab" onclick="adminTab('team',this)">Team members</button>
+        <button class="tab" onclick="adminTab('coverage',this)">Platform coverage</button>
+        <button class="tab" onclick="adminTab('assignments',this)">Assignments</button>
+      </div>
+      <div id="admin-log">
+        <div class="card">
+          <div class="filters">
+            <select id="log-filter-user" onchange="renderAdminLog()"><option value="">All team members</option></select>
+            <select id="log-filter-platform" onchange="renderAdminLog()"><option value="">All platforms</option></select>
+            <input type="text" id="log-filter-search" placeholder="Search report label..." oninput="renderAdminLog()" style="width:200px">
+          </div>
+          <div style="overflow-x:auto">
+            <table>
+              <thead><tr><th>Team member</th><th>Report</th><th>Platforms</th><th>Errors</th><th>Date &amp; time</th><th>Status</th></tr></thead>
+              <tbody id="admin-log-body"></tbody>
+            </table>
+          </div>
+          <div id="admin-log-empty" class="empty" style="display:none">No upload activity yet. Select a team member when uploading reports to log activity here.</div>
+        </div>
+      </div>
+      <div id="admin-team" style="display:none">
+        <div class="card"><div id="team-list"><div class="empty">No team members added yet.</div></div></div>
+      </div>
+      <div id="admin-coverage" style="display:none">
+        <div class="card">
+          <div style="font-size:13px;color:var(--text2);margin-bottom:14px">Which team members handle each platform, and when each was last processed.</div>
+          <div style="overflow-x:auto"><div id="coverage-grid"></div></div>
+        </div>
+      </div>
+      <div id="admin-assignments" style="display:none">
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+            <select id="asgn-filter-user" onchange="renderAdminAssignments()" style="font-size:12px"><option value="">All team members</option></select>
+            <select id="asgn-filter-status" onchange="renderAdminAssignments()" style="font-size:12px">
+              <option value="">All statuses</option>
+              <option value="open">Open</option>
+              <option value="resolved">Resolved</option>
+            </select>
+            <select id="asgn-filter-platform" onchange="renderAdminAssignments()" style="font-size:12px"><option value="">All platforms</option></select>
+            <span id="asgn-summary" style="font-size:12px;color:var(--text3);margin-left:auto"></span>
+          </div>
+          <div style="overflow-x:auto">
+            <table>
+              <thead><tr>
+                <th>Assigned to</th><th>Client</th><th>Account ID</th><th>Platform</th>
+                <th>Category</th><th>Error</th><th>Status</th><th>Report</th>
+              </tr></thead>
+              <tbody id="asgn-tbody"></tbody>
+            </table>
+          </div>
+          <div id="asgn-empty" class="empty" style="display:none">No assignments yet</div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ADD USER MODAL -->
+<div class="modal-overlay" id="add-user-modal">
+  <div class="modal">
+    <div class="modal-title">Add team member</div>
+    <div class="form-group"><label class="form-label">Full name</label><input type="text" id="new-user-name" placeholder="e.g. Sarah Chen" style="width:100%"></div>
+    <div class="form-group"><label class="form-label">Role</label><input type="text" id="new-user-role" placeholder="e.g. Data Analyst" style="width:100%"></div>
+    <div class="form-group">
+      <label class="form-label">Responsible platforms</label>
+      <div id="platform-checkboxes" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px"></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+      <button onclick="hideAddUserModal()">Cancel</button>
+      <button class="primary" onclick="addUser()">Add member</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'err_v3_clean';
+
+
+// ── GOOGLE AUTH ──────────────────────────────────────────────────────
+const ALLOWED_DOMAIN = 'timeline.co';
+const GOOGLE_CLIENT_ID = '803612817619-mdrcp0j0kop105vkoqh5iqei05cio6ji.apps.googleusercontent.com';
+
+async function initAuth() {
+  // Check for existing session
+  var session = null;
+  try {
+    var resp = await _sb.auth.getSession();
+    session = resp.data && resp.data.session ? resp.data.session : null;
+  } catch(e) { console.error('Session check failed:', e); }
+
+  // Handle OAuth callback (hash contains access_token)
+  if (window.location.hash.includes('access_token')) {
+    try {
+      var hashResp = await _sb.auth.getSession();
+      session = hashResp.data && hashResp.data.session ? hashResp.data.session : null;
+      // Clean URL
+      history.replaceState(null, '', window.location.pathname);
+    } catch(e) { console.error('Hash session error:', e); }
+  }
+
+  if (session && session.user) {
+    var email = session.user.email || '';
+    if (email.endsWith('@' + ALLOWED_DOMAIN)) {
+      showApp(session.user);
+    } else {
+      // Wrong domain — sign out
+      await _sb.auth.signOut();
+      showAuthError('Access restricted to @' + ALLOWED_DOMAIN + ' accounts only.');
+    }
+  } else {
+    showLoginScreen();
+  }
+
+  // Listen for auth state changes
+  _sb.auth.onAuthStateChange(async function(event, session) {
+    if (event === 'SIGNED_IN' && session && session.user) {
+      var email = session.user.email || '';
+      if (email.endsWith('@' + ALLOWED_DOMAIN)) {
+        showApp(session.user);
+      } else {
+        await _sb.auth.signOut();
+        showAuthError('Access restricted to @' + ALLOWED_DOMAIN + ' accounts only.');
+      }
+    } else if (event === 'SIGNED_OUT') {
+      showLoginScreen();
+    }
+  });
+}
+
+function showLoginScreen() {
+  document.getElementById('auth-screen').style.display = 'flex';
+  document.getElementById('main-app').style.display = 'none';
+  document.getElementById('user-bar').style.display = 'none';
+  document.body.style.opacity = '1';
+}
+
+function showApp(user) {
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('main-app').style.display = 'flex';
+  document.getElementById('user-bar').style.display = 'flex';
+  var name = user.user_metadata && user.user_metadata.full_name ? user.user_metadata.full_name : user.email;
+  var avatar = user.user_metadata && user.user_metadata.avatar_url ? user.user_metadata.avatar_url : '';
+  document.getElementById('user-name').textContent = name;
+  if (avatar) document.getElementById('user-avatar').src = avatar;
+  document.body.style.opacity = '1';
+  _currentUserEmail = user.email || null;
+  _currentUserId = null;
+  if (db.reports.length === 0 && db.errors.length === 0) {
+    initApp();
+  } else {
+    resolveUserLink();
+  }
+}
+
+async function resolveUserLink() {
+  // 1. Check Supabase for a saved link
+  var savedId = await sbLoadUserLink(_currentUserEmail);
+  if (savedId && db.users.find(function(u){return u.id===savedId;})) {
+    _currentUserId = savedId;
+    updateUserBarLinked();
+    updateMyTasksBadge();
+    renderMyTasks();
+    return;
+  }
+  // 2. Try auto-match by name
+  var autoId = matchUserToTeam(_currentUserEmail);
+  if (autoId) {
+    _currentUserId = autoId;
+    // Save the auto-match so it's consistent for everyone
+    sbSaveUserLink(_currentUserEmail, autoId);
+    updateUserBarLinked();
+    updateMyTasksBadge();
+    renderMyTasks();
+    return;
+  }
+  // 3. No match — prompt user to link manually
+  _currentUserId = null;
+  updateUserBarUnlinked();
+  updateMyTasksBadge();
+  renderMyTasks();
+  // Show modal automatically if team members exist
+  if (db.users.length > 0) {
+    showLinkModal(false);
+  }
+}
+
+function updateUserBarLinked() {
+  var u = db.users.find(function(u){return u.id===_currentUserId;});
+  var linked = document.getElementById('user-linked-name');
+  var changeBtn = document.getElementById('link-account-btn');
+  var promptBtn = document.getElementById('link-account-prompt');
+  if (u) {
+    linked.textContent = '→ ' + u.name;
+    linked.style.display = 'inline-block';
+    changeBtn.style.display = 'inline-block';
+    promptBtn.style.display = 'none';
+  }
+}
+
+function updateUserBarUnlinked() {
+  document.getElementById('user-linked-name').style.display = 'none';
+  document.getElementById('link-account-btn').style.display = 'none';
+  document.getElementById('link-account-prompt').style.display = 'inline-block';
+}
+
+function showAuthError(msg) {
+  document.getElementById('auth-screen').style.display = 'flex';
+  document.getElementById('main-app').style.display = 'none';
+  var errEl = document.getElementById('auth-error');
+  errEl.textContent = msg;
+  errEl.style.display = 'block';
+  document.body.style.opacity = '1';
+}
+
+function signInWithGoogle() {
+  _sb.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: window.location.href,
+      queryParams: { hd: ALLOWED_DOMAIN }
+    }
+  });
+}
+
+async function signOut() {
+  stopAutoRefresh();
+  await _sb.auth.signOut();
+  showLoginScreen();
+}
+// ── END GOOGLE AUTH ──────────────────────────────────────────────────
+
+// ── SUPABASE ────────────────────────────────────────────────────────
+const _SB_URL = 'https://fizhwfqgekmczutvqaxn.supabase.co';
+const _SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZpemh3ZnFnZWttY3p1dHZxYXhuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NTI3MTIsImV4cCI6MjA5MTIyODcxMn0.JHPrEnMnR14L_8tU6ZpQ_XOtA-o3t7yTN30KlLXf54k';
+const _sb = supabase.createClient(_SB_URL, _SB_KEY);
+
+async function sbFetchAll(table, order) {
+  var all = [];
+  var from = 0;
+  var batchSize = 1000;
+  while (true) {
+    var q = _sb.from(table).select('*').range(from, from + batchSize - 1);
+    if (order) q = q.order(order, {ascending: true});
+    var res = await q;
+    if (res.error) throw res.error;
+    var rows = res.data || [];
+    all = all.concat(rows);
+    if (rows.length < batchSize) break;
+    from += batchSize;
+  }
+  return all;
+}
+
+async function sbLoadAll() {
+  try {
+    var [rRep, rRes, rUsr, rLog] = await Promise.all([
+      _sb.from('reports').select('*').order('ts', {ascending: true}),
+      _sb.from('resolved').select('*'),
+      _sb.from('users').select('*').order('added_at', {ascending: true}),
+      _sb.from('upload_log').select('*').order('ts', {ascending: true}),
+    ]);
+    // Errors fetched in pages of 1000 to get all rows
+    var errRows = await sbFetchAll('errors', 'id');
+    db.reports = (rRep.data || []).map(function(r) {
+      return {id: r.id, label: r.label, ts: r.ts, count: r.count,
+              expected: r.expected, platforms: r.platforms || [],
+              uploadedBy: r.uploaded_by};
+    });
+    db.errors = errRows.map(function(e) {
+      return {reportId: e.report_id, reportLabel: e.report_label, ts: e.ts,
+              platform: e.platform, category: e.category, resolution: e.resolution,
+              accountId: e.account_id, clientId: e.client_id, client: e.client,
+              adviser: e.adviser, firm: e.firm, error: e.error, errorType: e.error_type};
+    });
+    db.resolved = {};
+    db.cleared = {};
+    (rRes.data || []).forEach(function(r) {
+      if (r.cleared) {
+        // Track cleared entries separately for error log filtering
+        db.cleared[r.key] = {clearedAt: r.cleared_at, clearedByReport: r.cleared_by_report};
+        return;
+      }
+      db.resolved[r.key] = {ts: r.resolved_at, userId: r.resolved_by || null};
+    });
+    db.users = (rUsr.data || []).map(function(u) {
+      return {id: u.id, name: u.name, role: u.role, platforms: u.platforms || [],
+              addedAt: u.added_at, active: u.active, isSuperAdmin: u.is_super_admin || false};
+    });
+    db.uploadLog = (rLog.data || []).map(function(l) {
+      return {id: l.id, reportId: l.report_id, reportLabel: l.report_label,
+              userId: l.user_id, ts: l.ts, platforms: l.platforms || [],
+              errorCount: l.error_count, expected: l.expected, matched: l.matched};
+    });
+    // Load platform assignments
+    db.platformAssignments = {};
+    try {
+      var rPA = await _sb.from('platform_assignments').select('*');
+      (rPA.data || []).forEach(function(a) {
+        db.platformAssignments[a.platform] = a.user_ids || [];
+      });
+    } catch(e) { console.warn('platform_assignments table not found'); }
+    db.assignments = {};
+    db.notes = {};
+    try {
+      var rAsgn = await _sb.from('assignments').select('*');
+      (rAsgn.data || []).forEach(function(a) { db.assignments[a.key] = a.user_id; });
+    } catch(e) { console.warn('assignments table not found — run the SQL migration'); }
+    try {
+      var rNotes = await _sb.from('notes').select('*');
+      (rNotes.data || []).forEach(function(n) { db.notes[n.account_key] = n.note; });
+    } catch(e) { console.warn('notes table not found — run the SQL migration'); }
+    // resolve_history is optional — table may not exist yet
+    db.resolveHistory = [];
+    try {
+      var rHist = await _sb.from('resolve_history').select('*').order('ts', {ascending: true});
+      db.resolveHistory = (rHist.data || []).map(function(h) {
+        return {id: h.id, errorKey: h.error_key, accountKey: h.account_key,
+                action: h.action, userId: h.user_id, userName: h.user_name,
+                noteAtTime: h.note_at_time, ts: h.ts};
+      });
+    } catch(e) { console.warn('resolve_history table not found — run the SQL migration to enable full audit trail'); }
+    saveDB();
+  } catch(e) { console.error('Supabase load error:', e); }
+}
+
+async function sbSaveReport(report, errors) {
+  try {
+    await _sb.from('reports').upsert({
+      id: report.id, label: report.label, ts: report.ts,
+      count: report.count, expected: report.expected,
+      platforms: report.platforms, uploaded_by: report.uploadedBy || null
+    });
+    var errRows = errors.map(function(e) {
+      return {report_id: e.reportId, report_label: e.reportLabel, ts: e.ts,
+              platform: e.platform, category: e.category, resolution: e.resolution,
+              account_id: e.accountId || null, client_id: e.clientId || null,
+              client: e.client || null, adviser: e.adviser || null,
+              firm: e.firm || null, error: e.error, error_type: e.errorType || null};
+    });
+    // Insert in batches of 500
+    for (var i = 0; i < errRows.length; i += 500) {
+      await _sb.from('errors').insert(errRows.slice(i, i + 500));
+    }
+  } catch(e) { console.error('Supabase save report error:', e); }
+}
+
+async function sbSaveUploadLog(log) {
+  try {
+    await _sb.from('upload_log').upsert({
+      id: log.id, report_id: log.reportId, report_label: log.reportLabel,
+      user_id: log.userId || null, ts: log.ts, platforms: log.platforms,
+      error_count: log.errorCount, expected: log.expected, matched: log.matched
+    });
+  } catch(e) { console.error('Supabase log error:', e); }
+}
+
+async function sbDeleteReport(reportId) {
+  try {
+    await _sb.from('reports').delete().eq('id', reportId);
+  } catch(e) { console.error('Supabase delete error:', e); }
+}
+
+async function sbToggleResolved(key, isResolved) {
+  try {
+    if (isResolved) {
+      await _sb.from('resolved').upsert({
+        key: key,
+        resolved_at: new Date().toISOString(),
+        resolved_by: _currentUserId || null
+      });
+    } else {
+      await _sb.from('resolved').delete().eq('key', key);
+    }
+  } catch(e) { console.error('Supabase resolved error:', e); }
+}
+
+async function sbSaveUser(user) {
+  try {
+    await _sb.from('users').upsert({
+      id: user.id, name: user.name, role: user.role,
+      platforms: user.platforms, added_at: user.addedAt, active: user.active
+    });
+  } catch(e) { console.error('Supabase user error:', e); }
+}
+
+async function sbDeleteUser(userId) {
+  try {
+    await _sb.from('users').delete().eq('id', userId);
+  } catch(e) { console.error('Supabase delete user error:', e); }
+}
+
+async function sbSaveAssignment(errorKey, userId) {
+  try {
+    if (userId) {
+      await _sb.from('assignments').upsert({key: errorKey, user_id: userId, assigned_at: new Date().toISOString()});
+    } else {
+      await _sb.from('assignments').delete().eq('key', errorKey);
+    }
+  } catch(e) { console.error('Supabase assignment error:', e); }
+}
+
+async function sbSaveNote(accountKey, noteText) {
+  try {
+    if (noteText) {
+      await _sb.from('notes').upsert({account_key: accountKey, note: noteText, updated_at: new Date().toISOString()});
+    } else {
+      await _sb.from('notes').delete().eq('account_key', accountKey);
+    }
+  } catch(e) { console.error('Supabase note error:', e); }
+}
+
+async function sbSaveResolveHistory(entry) {
+  try {
+    await _sb.from('resolve_history').insert({
+      error_key: entry.errorKey,
+      account_key: entry.accountKey,
+      action: entry.action,
+      user_id: entry.userId || null,
+      user_name: entry.userName || null,
+      note_at_time: entry.noteAtTime || null,
+      ts: entry.ts
+    });
+  } catch(e) { console.error('Supabase resolve history error:', e); }
+}
+
+async function sbSaveUserLink(email, userId) {
+  try {
+    if (userId) {
+      await _sb.from('user_links').upsert({email: email, user_id: userId, linked_at: new Date().toISOString()});
+    } else {
+      await _sb.from('user_links').delete().eq('email', email);
+    }
+  } catch(e) { console.error('Supabase user link error:', e); }
+}
+
+async function sbLoadUserLink(email) {
+  try {
+    var res = await _sb.from('user_links').select('user_id').eq('email', email).single();
+    return res.data ? res.data.user_id : null;
+  } catch(e) { return null; }
+}
+
+async function sbSavePlatformAssignment(platform, userIds) {
+  try {
+    await _sb.from('platform_assignments').upsert({
+      platform: platform,
+      user_ids: userIds,
+      updated_at: new Date().toISOString(),
+      updated_by: _currentUserId || null
+    });
+  } catch(e) { console.error('Supabase platform assignment error:', e); }
+}
+
+async function sbClearResolved(keys, reportLabel) {
+  // Soft-delete resolved entries — mark as cleared rather than deleting
+  try {
+    for (var i = 0; i < keys.length; i += 100) {
+      var batch = keys.slice(i, i + 100);
+      await _sb.from('resolved').update({
+        cleared: true,
+        cleared_at: new Date().toISOString(),
+        cleared_by_report: reportLabel
+      }).in('key', batch);
+    }
+  } catch(e) { console.error('Supabase clear resolved error:', e); }
+}
+
+function clearResolvedForPlatforms(platforms, newErrors, reportLabel) {
+  // After uploading a new report for platform(s), find any resolved errors
+  // for those platforms that did NOT reappear in the new report.
+  // Those are genuinely fixed — soft-delete them.
+
+  // Build a signature set of errors in the new report
+  var newSigs = new Set(newErrors.map(function(e) { return _reappearSig(e); }));
+
+  var keysToSlear = [];
+
+  Object.keys(db.resolved).forEach(function(key) {
+    // Find the error this resolved entry refers to
+    var err = db.errors.find(function(e) { return _eKey(e) === key; });
+    if (!err) return;
+    // Only process platforms in this upload
+    if (!platforms.includes(err.platform)) return;
+    // Check if it reappeared in the new report
+    var sig = _reappearSig(err);
+    if (!newSigs.has(sig)) {
+      // Didn't reappear — soft-delete
+      keysToSlear.push(key);
+    }
+  });
+
+  if (!keysToSlear.length) return 0;
+
+  // Remove from db.resolved and add to db.cleared immediately
+  if (!db.cleared) db.cleared = {};
+  keysToSlear.forEach(function(k) {
+    delete db.resolved[k];
+    db.cleared[k] = {clearedAt: new Date().toISOString(), clearedByReport: reportLabel};
+  });
+  saveDB();
+
+  // Persist to Supabase
+  sbClearResolved(keysToSlear, reportLabel);
+
+  return keysToSlear.length;
+}
+
+async function sbToggleSuperAdmin(userId, value) {
+  try {
+    await _sb.from('users').update({is_super_admin: value}).eq('id', userId);
+  } catch(e) { console.error('Supabase super admin error:', e); }
+}
+// ── END SUPABASE ────────────────────────────────────────────────────
+const ALL_PLATFORMS = ['Aviva','Quilter','Scottish Widows','ABRDN','Fidelity','7IM','True Potential','Transact','Wealthtime','Nucleus'];
+const AVATAR_COLORS = ['#2563eb','#059669','#d97706','#7c3aed','#dc2626','#db2777','#0284c7','#65a30d'];
+
+const CAT_DEFS = {
+  'low-balance':       {label:'Low balance',         color:'#2563eb',bg:'#dbeafe',text:'#1e40af',resolution:'auto'},
+  'adviser-match':     {label:'Adviser not matched',  color:'#d97706',bg:'#fef3c7',text:'#92400e',resolution:'manual'},
+  'firm-match':        {label:'Firm not matched',     color:'#6b7280',bg:'#f3f4f6',text:'#374151',resolution:'manual'},
+  'portfolio-access':  {label:'Portfolio access',     color:'#7c3aed',bg:'#ede9fe',text:'#5b21b6',resolution:'manual'},
+  'isin-mismatch':     {label:'ISIN not matched',     color:'#059669',bg:'#d1fae5',text:'#065f46',resolution:'review'},
+  'portfolio-mismatch':{label:'Portfolio name',       color:'#d97706',bg:'#fef3c7',text:'#92400e',resolution:'manual'},
+  'duplicate-holdings':{label:'Duplicated holdings',  color:'#b45309',bg:'#fef3c7',text:'#92400e',resolution:'review'},
+  'wrong-firm':        {label:'Wrong firm account',   color:'#dc2626',bg:'#fee2e2',text:'#991b1b',resolution:'manual'},
+  'missing-client-id': {label:'Missing client ID',    color:'#db2777',bg:'#fce7f3',text:'#9d174d',resolution:'manual'},
+  'client-import':     {label:'Client record error',  color:'#16a34a',bg:'#dcfce7',text:'#166534',resolution:'manual'},
+  'unknown':           {label:'Other',                color:'#6b7280',bg:'#f3f4f6',text:'#374151',resolution:'review'},
+};
+const RES_META = {
+  auto:   {label:'Auto-resolvable',   color:'#059669',bg:'#d1fae5',text:'#065f46'},
+  manual: {label:'Manual fix required',color:'#dc2626',bg:'#fee2e2',text:'#991b1b'},
+  review: {label:'Needs review',      color:'#b45309',bg:'#fef3c7',text:'#92400e'},
+};
+
+function catBadge(catId){const c=CAT_DEFS[catId]||CAT_DEFS.unknown;return`<span class="cat-badge" style="background:${c.bg};color:${c.text}">${c.label}</span>`;}
+
+function classifyError(errorType,errorText){
+  const t=(errorText||'').toLowerCase(),et=errorType||'';
+  if(et==='low-balance'||t.includes('balance is less than or equal'))return'low-balance';
+  if(et==='adviser-match'||t.includes("couldn't match adviser"))return'adviser-match';
+  if(et==='firm-match'||t.includes("couldn't match firm"))return'firm-match';
+  if(et==='portfolio-access'||t.includes("doesn't have access to portfolios"))return'portfolio-access';
+  if(et==='isin-mismatch'||t.includes('isin code'))return'isin-mismatch';
+  if(et==='portfolio-mismatch'||t.includes('portfolio name'))return'portfolio-mismatch';
+  if(et==='duplicate-holdings'||t.includes('duplicated holdings'))return'duplicate-holdings';
+  if(et==='wrong-firm'||t.includes('belongs to a client from a different firm'))return'wrong-firm';
+  if(et==='missing-client-id'||t.includes('missing client identifier'))return'missing-client-id';
+  if(et==='client-import'||t.includes('error inserting or updating client')||t.includes('error importing client'))return'client-import';
+  return'unknown';
+}
+
+// Platform detection
+function normaliseAccountId(id){if(!id)return id;return id.replace(/^(IMF[A-Z0-9]{5})\s+D$/i,'$1 D').trim();}
+function normaliseFirmName(raw){if(!raw)return raw;return raw.replace(/^\d+\s+/,'').trim();}
+function isNucleusClientId(id){return/^1\d{8}$/.test((id||'').trim());}
+function detectClientIdPlatform(clientId){
+  if(!clientId)return null;const id=clientId.trim();
+  if(/^FID[A-Za-z0-9]{8}$/.test(id))return'Fidelity';
+  if(/^C[0-9A-Fa-f]{8,}$/.test(id)||/^CSEV[0-9A-Fa-f]+$/.test(id))return'Fundment';
+  if(/^AV\d{7}$/.test(id))return'Aviva';
+  if(/^AC\d{7}$/.test(id))return'Quilter';
+  if(/^EM\d{7}$/.test(id))return'Scottish Widows';
+  if(/^WP\d{7}$/.test(id))return'ABRDN';
+  if(/^\d{3}-\d{3}-\d{3}$/.test(id))return'Transact';
+  if(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))return'True Potential';
+  if(isNucleusClientId(id))return'Nucleus';
+  if(/^\d{1,5}$/.test(id))return'Wealthtime';
+  return null;
+}
+function detectPlatform(rawAccountId,clientId){
+  const aid=normaliseAccountId((rawAccountId||'').trim());const cid=(clientId||'').trim();
+  if(/^N\d{6}$/.test(aid))return'Nucleus';
+  if(/^IMF[A-Z0-9]{5} D$/i.test(aid))return'7IM';
+  if(/^AG\d{8}$/.test(aid))return'Fidelity';
+  if(/^AS\d{8}$/.test(aid))return'Fidelity';
+  if(/^\d{10}$/.test(aid))return'Fidelity';
+  if(/^DM\d{7}$/.test(aid)){
+    if(/^AV\d{7}$/.test(cid))return'Aviva';
+    if(/^AC\d{7}$/.test(cid))return'Quilter';
+    if(/^EM\d{7}$/.test(cid))return'Scottish Widows';
+    if(/^WP\d{7}$/.test(cid))return'ABRDN';
+    return'DM-Unknown';
+  }
+  if(/^IH\d{8}$/.test(aid))return'Transact';
+  if(/^PF[0-9A-Fa-f]{8,}$/.test(aid))return'Fundment';
+  if(/^P1036-\d{5}-\d{5}$/.test(aid))return'Aviva';
+  if(/^P\d{4}-\d{5}-\d{5}$/.test(aid))return'True Potential';
+  if(/^\d{1,5}$/.test(aid))return'Wealthtime';
+  const fc=detectClientIdPlatform(cid);if(fc)return fc;
+  return'Unknown';
+}
+function isDisplayOnlyClientId(cid,cname){
+  if(!cid||!cname)return false;
+  if(cid.trim().toLowerCase()===cname.trim().toLowerCase())return true;
+  if(/^(mr|mrs|ms|miss|dr|prof)\.?\s+/i.test(cid.trim()))return true;
+  return false;
+}
+function inferPlatformFromFilename(f){
+  const fl=f.toLowerCase();
+  if(fl.includes('nucleus'))return'Nucleus';
+  if(fl.includes('abrdn')||fl.includes('aberdeen'))return'ABRDN';
+  if(fl.includes('wealthtime'))return'Wealthtime';
+  if(fl.includes('scottish_widows')||fl.includes('scottish widows'))return'Scottish Widows';
+  if(fl.includes('seven_investment')||fl.includes('7im')||fl.includes('seven investment'))return'7IM';
+  if(fl.includes('fidelity'))return'Fidelity';
+  if(fl.includes('quilter'))return'Quilter';
+  if(fl.includes('aviva'))return'Aviva';
+  if(fl.includes('transact'))return'Transact';
+  if(fl.includes('true_potential')||fl.includes('truepotential'))return'True Potential';
+  return null;
+}
+function parseExpected(text){
+  let m=text.match(/^Errors\s*\((\d+)\)/im);if(m)return parseInt(m[1]);
+  m=text.match(/^(\d+)\s+errors?:/im);if(m)return parseInt(m[1]);return 0;
+}
+function cleanError(s){return s.replace(/^"+|"+$/g,'').trim();}
+function normaliseClientName(raw){if(!raw||!raw.trim())return null;return raw.replace(/\|[^|)]+/g,'').replace(/\s{2,}/g,' ').trim()||null;}
+
+function parseReport(text){
+  const lines=text.split('\n'),data=[];
+  let firm=null,adviser=null,client=null,clientId=null;
+  for(let raw of lines){
+    const line=raw.trim();if(!line||line.startsWith('---'))continue;let m;
+    if(m=line.match(/^-\s+Firm (.+?) had \d+ errors?:/)){firm=normaliseFirmName(m[1].trim());adviser=null;client=null;clientId=null;continue;}
+    if(m=line.match(/^-\s+Firm (.+?) error:/)){firm=normaliseFirmName(m[1].trim());adviser=null;client=null;clientId=null;continue;}
+    if(m=line.match(/^-\s+Couldn't match firm (.+?) to an existing firm/i)){const fn=normaliseFirmName(m[1].trim());data.push({firm:fn,adviser:null,client:null,clientId:null,accountId:null,error:`Couldn't match firm ${fn} to an existing firm`,platform:'Unknown',errorType:'firm-match'});continue;}
+    if(m=line.match(/^-\s+Adviser (.*?) had \d+ errors?:/)){adviser=m[1].trim();client=null;clientId=null;continue;}
+    if(m=line.match(/^-\s+Adviser (.*?) error:/i)){adviser=m[1].trim();continue;}
+    if(m=line.match(/^-\s+Couldn't match adviser (.*?) to an existing adviser/i)){data.push({firm,adviser:m[1].trim(),client:null,clientId:null,accountId:null,error:`Couldn't match adviser ${m[1].trim()} to an existing adviser`,platform:'Unknown',errorType:'adviser-match'});continue;}
+    if(m=line.match(/^-\s+Client (.+?) \(([^)]*)\) had \d+ errors?:/)){client=normaliseClientName(m[1]);clientId=isDisplayOnlyClientId(m[2].trim(),m[1])?null:m[2].trim()||null;continue;}
+    if(m=line.match(/^-\s+Error importing account (.+?) and its holdings:\s*(.+)/)){
+      const rawAid=m[1].trim(),aid=normaliseAccountId(rawAid),err=cleanError(m[2].trim());
+      const platform=detectPlatform(rawAid,clientId);
+      const et=err.toLowerCase().includes('balance is less than or equal')?'low-balance':err.toLowerCase().includes("doesn't have access")?'portfolio-access':err.toLowerCase().includes('belongs to a client from a different firm')?'wrong-firm':'account-import';
+      data.push({firm,adviser,client,clientId,accountId:aid,error:err,platform,errorType:et});continue;
+    }
+    if(m=line.match(/^-\s+Couldn't match any holding ISIN code for account (.+)/)){const rawAid=m[1].trim(),aid=normaliseAccountId(rawAid),platform=detectPlatform(rawAid,clientId);data.push({firm,adviser,client,clientId,accountId:aid,error:`Couldn't match any holding ISIN code for account ${aid}`,platform,errorType:'isin-mismatch'});continue;}
+    if(m=line.match(/^-\s+Couldn't match account (.+?) portfolio name (.+?) to an existing model portfolio/)){const rawAid=m[1].trim(),aid=normaliseAccountId(rawAid),platform=detectPlatform(rawAid,clientId);data.push({firm,adviser,client,clientId,accountId:aid,error:`Couldn't match portfolio name ${m[2].trim()} to an existing model portfolio`,platform,errorType:'portfolio-mismatch'});continue;}
+    if(m=line.match(/^-\s+Account (.+?) has duplicated holdings/)){const rawAid=m[1].trim(),aid=normaliseAccountId(rawAid),platform=detectPlatform(rawAid,clientId);data.push({firm,adviser,client,clientId,accountId:aid,error:`Account ${aid} has duplicated holdings`,platform,errorType:'duplicate-holdings'});continue;}
+    if(m=line.match(/^-\s+Error importing client (.+?):\s*(.+)/)){const err=cleanError(m[2].trim()),cname=normaliseClientName(m[1].trim());const et=err.toLowerCase().includes('missing client identifier')?'missing-client-id':'client-import';const platform=clientId?detectClientIdPlatform(clientId)||'Unknown':'Unknown';data.push({firm,adviser,client:cname||client,clientId,accountId:null,error:err,platform,errorType:et});continue;}
+  }
+  data.forEach(row=>{row.category=classifyError(row.errorType,row.error);row.resolution=CAT_DEFS[row.category]?.resolution||'review';});
+  return{data,expected:parseExpected(text)};
+}
+
+// DB — localStorage only for standalone
+function loadDB(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'{"reports":[],"errors":[],"users":[],"uploadLog":[]}')}catch(e){return{reports:[],errors:[],users:[],uploadLog:[]};}}
+function saveDB(){localStorage.setItem(STORAGE_KEY,JSON.stringify(db));}
+let db=loadDB();
+if(!db.users)db.users=[];if(!db.uploadLog)db.uploadLog=[];if(!db.resolved)db.resolved={};if(!db.assignments)db.assignments={};if(!db.notes)db.notes={};if(!db.resolveHistory)db.resolveHistory=[];if(!db.platformAssignments)db.platformAssignments={};if(!db.cleared)db.cleared={};
+
+// Data loaded from Supabase on init — see sbLoadAll()
+
+
+// Users
+function getUserColor(uid){const u=db.users.find(u=>u.id===uid);if(!u)return'#6b7280';return AVATAR_COLORS[db.users.indexOf(u)%AVATAR_COLORS.length];}
+function getUserInitials(uid){const u=db.users.find(u=>u.id===uid);if(!u)return'?';return u.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);}
+function getUserName(uid){const u=db.users.find(u=>u.id===uid);return u?u.name:'Unknown';}
+function avatarHtml(uid,size=32){const col=getUserColor(uid),init=getUserInitials(uid);return`<div class="user-avatar" style="width:${size}px;height:${size}px;background:${col}20;color:${col};font-size:${size>30?12:10}px;font-weight:600">${init}</div>`;}
+
+function populateUploaderSelect(){
+  const sel=document.getElementById('uploader-select');const cur=sel.value;
+  sel.innerHTML='<option value="">Select team member...</option>';
+  db.users.forEach(u=>{const o=document.createElement('option');o.value=u.id;o.textContent=u.name+(u.role?` (${u.role})`:'');sel.appendChild(o);});
+  sel.value=cur;
+}
+
+function showAddUserModal(){
+  const chk=document.getElementById('platform-checkboxes');
+  chk.innerHTML=ALL_PLATFORMS.map(p=>`<label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer"><input type="checkbox" value="${p}" style="margin:0;width:14px;height:14px"> ${p}</label>`).join('');
+  document.getElementById('add-user-modal').classList.add('open');
+  document.getElementById('new-user-name').value='';document.getElementById('new-user-role').value='';
+}
+function hideAddUserModal(){document.getElementById('add-user-modal').classList.remove('open');}
+document.getElementById('add-user-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)hideAddUserModal();});
+
+function addUser(){
+  const name=document.getElementById('new-user-name').value.trim();
+  if(!name){alert('Please enter a name.');return;}
+  const role=document.getElementById('new-user-role').value.trim();
+  const platforms=[...document.querySelectorAll('#platform-checkboxes input:checked')].map(i=>i.value);
+  var newUser={id:'u'+Date.now(),name:name,role:role,platforms:platforms,addedAt:new Date().toISOString(),active:true};
+  db.users.push(newUser);
+  saveDB();sbSaveUser(newUser);hideAddUserModal();populateUploaderSelect();renderTeamList();renderCoverageGrid();populateAdminFilters();
+}
+function toggleUserActive(uid){var u=db.users.find(function(u){return u.id===uid;});if(u){u.active=!u.active;saveDB();sbSaveUser(u);}renderTeamList();}
+function deleteUser(uid){if(!confirm('Remove this team member?'))return;db.users=db.users.filter(function(u){return u.id!==uid;});saveDB();sbDeleteUser(uid);populateUploaderSelect();renderTeamList();renderCoverageGrid();populateAdminFilters();}
+
+function renderTeamList(){
+  const el=document.getElementById('team-list');
+  if(!db.users.length){el.innerHTML='<div class="empty">No team members added yet. Click "Add team member" to get started.</div>';return;}
+  const amSuperAdmin = isSuperAdmin();
+  el.innerHTML=db.users.map(u=>{
+    const uploads=db.uploadLog.filter(l=>l.userId===u.id).length;
+    const last=db.uploadLog.filter(l=>l.userId===u.id).sort((a,b)=>b.ts.localeCompare(a.ts))[0];
+    const assignedPlats=ALL_PLATFORMS.filter(p=>(db.platformAssignments&&db.platformAssignments[p]||[]).includes(u.id));
+    return`<div class="user-row">
+      ${avatarHtml(u.id,40)}
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-weight:500;font-size:14px">${u.name}</span>
+          ${u.isSuperAdmin?'<span style="font-size:10px;font-weight:700;background:#ede9fe;color:#5b21b6;padding:2px 7px;border-radius:99px">Super admin</span>':''}
+        </div>
+        <div style="font-size:12px;color:var(--text2)">${u.role||'No role set'}</div>
+        <div style="margin-top:5px">${assignedPlats.length?assignedPlats.map(p=>`<span class="platform-pill">${p}</span>`).join(''):'<span style="font-size:11px;color:var(--text3)">No platforms assigned</span>'}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:12px;color:var(--text2)">${uploads} upload${uploads!==1?'s':''}</div>
+        ${last?`<div style="font-size:11px;color:var(--text3);margin-top:2px">Last: ${new Date(last.ts).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}</div>`:''}
+        <div style="margin-top:8px;display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;align-items:center">
+          ${amSuperAdmin?`<button onclick="toggleSuperAdmin('${u.id}')" style="font-size:11px;padding:3px 8px;border-radius:6px;border:0.5px solid var(--border-med);background:${u.isSuperAdmin?'#ede9fe':'var(--surface)'};color:${u.isSuperAdmin?'#5b21b6':'var(--text3)'}">${u.isSuperAdmin?'Remove admin':'Make admin'}</button>`:''}
+          <span onclick="toggleUserActive('${u.id}')" style="cursor:pointer;font-size:11px" class="cat-badge" style="background:${u.active?'#d1fae5':'#f3f4f6'};color:${u.active?'#065f46':'#6b7280'}">${u.active?'Active':'Inactive'}</span>
+          <button class="danger" onclick="deleteUser('${u.id}')" style="font-size:12px;padding:3px 10px">Remove</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function parseAndStore(filenameHint){
+  const text=document.getElementById('paste-area').value.trim();
+  const label=document.getElementById('report-label').value.trim()||`Report ${db.reports.length+1}`;
+  const uploaderId=document.getElementById('uploader-select').value;
+  if(!text){showUploadStatus('Please paste report text or upload a file.','warn');return;}
+  const{data,expected}=parseReport(text);
+  if(!data.length){showUploadStatus('No errors found — check the report format.','warn');return;}
+  const fp=filenameHint?inferPlatformFromFilename(filenameHint):null;
+  if(fp)data.forEach(row=>{if(row.platform==='Unknown'||row.platform==='DM-Unknown')row.platform=fp;});
+  const reportId='r'+Date.now(),ts=new Date().toISOString();
+  const platforms=[...new Set(data.map(r=>r.platform).filter(p=>p!=='Unknown'&&p!=='DM-Unknown'))];
+  var newReport = {id:reportId,label:label,ts:ts,count:data.length,expected:expected,platforms:platforms,uploadedBy:uploaderId||null};
+  var newErrors = data.map(function(row){return Object.assign({},row,{reportId:reportId,reportLabel:label,ts:ts});});
+  var newLog = {id:'l'+Date.now(),reportId:reportId,reportLabel:label,userId:uploaderId||null,ts:ts,platforms:platforms,errorCount:data.length,expected:expected,matched:data.length===expected};
+  db.reports.push(newReport);
+  newErrors.forEach(function(row){db.errors.push(row);});
+  db.uploadLog.push(newLog);
+  saveDB();
+  // Save to Supabase for shared access
+  sbSaveReport(newReport, newErrors);
+  sbSaveUploadLog(newLog);
+  // Soft-delete resolved errors that didn't reappear in this report
+  var clearedCount = clearResolvedForPlatforms(platforms, newErrors, label);
+  const note=expected>0?(data.length===expected?` — all ${expected} matched`:` — stated ${expected}, parsed ${data.length}`):'';
+  var clearedNote = clearedCount > 0 ? ` ${clearedCount} previously resolved error${clearedCount!==1?'s were':' was'} not in this report and have been removed from the log.` : '';
+  showUploadStatus(`Stored ${data.length} errors from "${label}"${note}.`+(uploaderId?` Logged to ${getUserName(uploaderId)}.`:'')+clearedNote,'ok');
+  document.getElementById('paste-area').value='';document.getElementById('report-label').value='';
+  renderOverview();renderHistoryList();populateFilters();renderAdminLog();renderTeamList();renderCoverageGrid();renderErrorLog();
+}
+document.getElementById('fileIn').addEventListener('change',e=>{
+  const file=e.target.files[0];if(!file)return;
+  if(!document.getElementById('report-label').value)document.getElementById('report-label').value=file.name.replace(/\.txt$/i,'').replace(/_/g,' ');
+  const reader=new FileReader();
+  reader.onload=ev=>{document.getElementById('paste-area').value=ev.target.result;parseAndStore(file.name);};
+  reader.readAsText(file);e.target.value='';
+});
+function showUploadStatus(msg,type){const el=document.getElementById('upload-status');el.className=type==='ok'?'status-ok':'status-warn';el.textContent=msg;}
+
+const SAMPLE=`Errors (5):
+- Firm Evolution Financial Planning Ltd had 1 errors:
+    - Adviser Rebecca Robertson had 1 errors:
+        - Client Melanie Coeshott (AV2743862) had 1 errors:
+            - Error importing account DM2317036 and its holdings: "Firm Evolution Financial Planning Ltd doesn't have access to portfolios named Timeline Tracker 90"
+- Firm Jones & Co Advisers Ltd had 2 errors:
+    - Adviser Joshua Walker had 2 errors:
+        - Client Fiona Barrand (EM1694701) had 1 errors:
+            - Couldn't match any holding ISIN code for account DM1429368
+        - Client Erin Hancock Investment (EM1619781) had 1 errors:
+            - Error importing account DM1406706 and its holdings: "Account DM1406706 balance is less than or equal to £100"
+- Firm Harvest Associates had 1 errors:
+    - Adviser Andrew Boulton had 1 errors:
+        - Client Kevin Snell (13848) had 1 errors:
+            - Error importing account 23831 and its holdings: "Error importing account: the account 23831 belongs to a client from a different firm, so it won't be updated"
+- Firm Corbel Partners Limited had 1 errors:
+    - Adviser Kevin Anthony Hamblin error:
+        - Couldn't match adviser Kevin Anthony Hamblin to an existing adviser`;
+function loadSample(){document.getElementById('report-label').value='Sample — Multi-platform';document.getElementById('paste-area').value=SAMPLE;}
+
+// Platform / badges
+function platformColor(p){return{Aviva:'#2563eb','True Potential':'#16a34a',Transact:'#7c3aed',Wealthtime:'#d97706',Quilter:'#ea580c',Fidelity:'#db2777','7IM':'#059669','Scottish Widows':'#6b7280',ABRDN:'#4f46e5',Nucleus:'#ca8a04'}[p]||'#6b7280';}
+function platformBadge(p){const c={Aviva:'b-aviva','True Potential':'b-tp',Transact:'b-transact',Wealthtime:'b-wealthtime',Quilter:'b-quilter',Fidelity:'b-fidelity','7IM':'b-7im','Scottish Widows':'b-sw',ABRDN:'b-abrdn',Nucleus:'b-nucleus',Fundment:'b-fundment'}[p]||'b-unknown';return`<span class="badge ${c}">${p}</span>`;}
+function countBy(arr,key){const c={};arr.forEach(r=>{const v=r[key]||'Unknown';c[v]=(c[v]||0)+1;});return Object.entries(c).sort((a,b)=>b[1]-a[1]);}
+function renderBars(cid,entries,colorFn){
+  const el=document.getElementById(cid);if(!entries.length){el.innerHTML='<div class="empty">No data</div>';return;}
+  const m=entries[0][1]||1;
+  el.innerHTML=entries.slice(0,8).map(([label,count])=>`<div class="bar-row"><div class="bar-label" title="${label}">${label}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.round(count/m*100)}%;background:${colorFn(label)}"></div></div><div class="bar-count" style="color:var(--text2)">${count}</div></div>`).join('');
+}
+
+let activeCatFilter=null;
+function renderCatFilterChips(){
+  const chips=document.getElementById('cat-filter-chips');
+  const counts={};activeErrors().forEach(e=>{const c=e.category||'unknown';counts[c]=(counts[c]||0)+1;});
+  chips.innerHTML=`<span class="cat-chip${!activeCatFilter?' active':''}" onclick="setCatFilter(null)" style="background:var(--surface2);color:var(--text2);${!activeCatFilter?'border-color:var(--text)':''}">All</span>`+
+    Object.keys(CAT_DEFS).filter(k=>counts[k]).map(k=>{const c=CAT_DEFS[k];const ia=activeCatFilter===k;return`<span class="cat-chip${ia?' active':''}" onclick="setCatFilter('${k}')" style="background:${c.bg};color:${c.text};${ia?`border-color:${c.color}`:'border-color:transparent'}">${c.label} <strong>${counts[k]||0}</strong></span>`;}).join('');
+}
+function setCatFilter(cat){activeCatFilter=cat;renderCatFilterChips();renderErrorLog();}
+
+function _fill(id,items){
+  const el=document.getElementById(id);if(!el)return;
+  const cur=el.value;
+  while(el.options.length>1)el.remove(1);
+  items.forEach(function(item){const o=document.createElement('option');o.value=item.v;o.textContent=item.l||item.v;el.appendChild(o);});
+  el.value=[...el.options].some(function(o){return o.value===cur;})?cur:'';
+}
+function pf(){
+  var errors=activeErrors();
+  var vp=document.getElementById('fp')?document.getElementById('fp').value:'';
+  var vc=document.getElementById('fc')?document.getElementById('fc').value:'';
+  var vrep=document.getElementById('frep')?document.getElementById('frep').value:'';
+  var vfi=document.getElementById('ffi')?document.getElementById('ffi').value:'';
+  var vad=document.getElementById('fad')?document.getElementById('fad').value:'';
+  _fill('fp',[...new Set(errors.map(function(e){return e.platform;}).filter(Boolean))].sort().map(function(v){return{v:v};}));
+  var p1=vp?errors.filter(function(e){return e.platform===vp;}):errors;
+  var cats=[...new Set(p1.map(function(e){return e.category;}).filter(Boolean))].sort(function(a,b){return(CAT_DEFS[a]?CAT_DEFS[a].label:a).localeCompare(CAT_DEFS[b]?CAT_DEFS[b].label:b);});
+  _fill('fc',cats.map(function(c){return{v:c,l:CAT_DEFS[c]?CAT_DEFS[c].label:c};}));
+  var repIds=new Set(p1.map(function(e){return e.reportId;}));
+  _fill('frep',[...db.reports].filter(function(r){return repIds.has(r.id);}).reverse().map(function(r){return{v:r.id,l:r.label};}));
+  var p2=p1.filter(function(e){return(!vc||e.category===vc)&&(!vrep||e.reportId===vrep);});
+  _fill('ffi',[...new Set(p2.map(function(e){return e.firm;}).filter(Boolean))].sort().map(function(v){return{v:v};}));
+  var p3=p2.filter(function(e){return!vfi||e.firm===vfi;});
+  _fill('fad',[...new Set(p3.map(function(e){return e.adviser;}).filter(Boolean))].sort().map(function(v){return{v:v};}));
+  var p4=p3.filter(function(e){return!vad||e.adviser===vad;});
+  _fill('fcl',[...new Set(p4.map(function(e){return e.client;}).filter(Boolean))].sort().map(function(v){return{v:v};}));
+  // Populate assigned-to filter
+  var asel=document.getElementById('fasgn');
+  if(asel){
+    var cur=asel.value;
+    while(asel.options.length>2)asel.remove(2);
+    db.users.forEach(function(u){var o=document.createElement('option');o.value=u.id;o.textContent=u.name;asel.appendChild(o);});
+    asel.value=[...asel.options].some(function(o){return o.value===cur;})?cur:'';
+  }
+  renderCatFilterChips();
+}
+function populateFilters(){pf();}
+function clearFilters(){
+  ['fp','fc','fr','fst','frep','ffi','fad','fcl','fasgn'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+  var fs=document.getElementById('filter-search');if(fs)fs.value='';
+  activeCatFilter=null;pf();renderErrorLog();
+}
+
+var _elSort={key:null,dir:1};
+var _rowKeys={};
+var _elPage=0;
+var _elPageSize=200;
+var _elFiltered=[];
+
+function elChangePage(dir){
+  var maxPage=Math.ceil(_elFiltered.length/_elPageSize)-1;
+  _elPage=Math.max(0,Math.min(_elPage+dir,maxPage));
+  renderErrorLogPage();
+}
+var _hiddenCols=new Set();
+function sortEL(th){
+  var k=th.dataset.key;
+  document.querySelectorAll('#elt th.sortable').forEach(function(h){h.classList.remove('sort-asc','sort-desc');});
+  if(_elSort.key===k){_elSort.dir*=-1;}else{_elSort.key=k;_elSort.dir=1;}
+  th.classList.add(_elSort.dir===1?'sort-asc':'sort-desc');
+  renderErrorLog();
+}
+function togCol(btn){
+  var c=parseInt(btn.dataset.col);
+  if(_hiddenCols.has(c)){_hiddenCols.delete(c);btn.classList.add('on');}
+  else{_hiddenCols.add(c);btn.classList.remove('on');}
+  _applyHidden();
+}
+function _applyHidden(){
+  var t=document.getElementById('elt');if(!t)return;
+  for(var i=0;i<=9;i++){
+    var show=!_hiddenCols.has(i);
+    t.querySelectorAll('th:nth-child('+(i+1)+'),td:nth-child('+(i+1)+')').forEach(function(c){c.style.display=show?'':'none';});
+  }
+}
+function _eKey(e){return(e.accountId||'')+'|'+(e.reportId||'')+'|'+(e.error||'').slice(0,60);}
+
+// Returns only non-cleared, non-low-balance errors — use this everywhere instead of db.errors for display/counts
+function activeErrors(){
+  return db.errors.filter(function(e){
+    if(db.cleared&&db.cleared[_eKey(e)])return false;
+    if(e.category==='low-balance')return false;
+    return true;
+  });
+}
+function toggleResolvedIdx(cb){
+  var idx=parseInt(cb.dataset.idx);
+  var k=_rowKeys[idx];
+  if(!k)return;
+  toggleResolved(k);
+}
+function toggleResolved(k){
+  if(!db.resolved)db.resolved={};
+  var nowResolved;
+  if(db.resolved[k]){delete db.resolved[k];nowResolved=false;}
+  else{db.resolved[k]={ts:new Date().toISOString(),userId:_currentUserId||null};nowResolved=true;}
+  saveDB();
+  sbToggleResolved(k, nowResolved);
+  // Build audit history entry — find the account key from the error key
+  var matchedErr=db.errors.find(function(e){return _eKey(e)===k;});
+  var accountKey=matchedErr?(matchedErr.accountId||matchedErr.clientId||''):'';
+  var noteAtTime=(db.notes&&accountKey&&db.notes[accountKey])?db.notes[accountKey]:null;
+  var actingUserName=_currentUserId?getUserName(_currentUserId):(_currentUserEmail||null);
+  var histEntry={
+    id:'h'+Date.now(),
+    errorKey:k,
+    accountKey:accountKey,
+    action:nowResolved?'resolved':'unresolved',
+    userId:_currentUserId||null,
+    userName:actingUserName,
+    noteAtTime:noteAtTime,
+    ts:new Date().toISOString()
+  };
+  if(!db.resolveHistory)db.resolveHistory=[];
+  db.resolveHistory.push(histEntry);
+  saveDB();
+  sbSaveResolveHistory(histEntry);
+  renderErrorLog();renderOverview();renderMyTasks();
+  // Refresh panel if open on same account
+  if(accountKey&&document.getElementById('acct-panel-overlay').classList.contains('open')){
+    var panelKey=document.getElementById('acct-panel').dataset.accountKey;
+    if(panelKey===accountKey)openAcctPanel(accountKey);
+  }
+}
+
+// ── ASSIGN ───────────────────────────────────────────────────────────
+function renderAssignCell(errorKey,currentUserId){
+  var opts='<option value="">Unassigned</option>';
+  db.users.forEach(function(u){
+    opts+='<option value="'+u.id+'"'+(currentUserId===u.id?' selected':'')+'>'+u.name+'</option>';
+  });
+  return '<select class="assign-sel" onchange="setAssignment(\''+errorKey+'\',this.value)" style="font-size:12px;padding:3px 6px;border-radius:6px;border:0.5px solid var(--border-med);background:var(--surface);color:var(--text);width:100%;max-width:140px">'+opts+'</select>';
+}
+
+function setAssignment(errorKey,userId){
+  if(!db.assignments)db.assignments={};
+  if(userId){db.assignments[errorKey]=userId;}
+  else{delete db.assignments[errorKey];}
+  saveDB();
+  sbSaveAssignment(errorKey,userId||null);
+  renderMyTasks();
+  updateMyTasksBadge();
+}
+
+// ── NOTES ────────────────────────────────────────────────────────────
+// Notes are keyed by accountId so they persist across reports for same account
+function renderNoteCell(accountKey,currentNote){
+  if(!accountKey)return '<span style="color:var(--text3);font-size:12px">—</span>';
+  var escaped=(currentNote||'').replace(/'/g,"&#39;").replace(/"/g,'&quot;');
+  var display=currentNote
+    ?'<div class="note-preview" title="'+escaped+'" onclick="openNoteModal(\''+accountKey+'\',this)" style="font-size:12px;color:var(--text2);max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;padding:3px 6px;border-radius:6px;border:0.5px solid var(--border-med);background:var(--surface2)">'+currentNote+'</div>'
+    :'<button onclick="openNoteModal(\''+accountKey+'\',this)" style="font-size:11px;color:var(--text3);padding:3px 8px;border-radius:6px;border:0.5px dashed var(--border-med);background:none;cursor:pointer">+ Add note</button>';
+  return display;
+}
+
+var _noteModalKey=null;
+function openNoteModal(accountKey,triggerEl){
+  _noteModalKey=accountKey;
+  var cur=(db.notes&&db.notes[accountKey])||'';
+  document.getElementById('note-modal-textarea').value=cur;
+  var recurring=db.errors.filter(function(e){return e.accountId===accountKey||e.clientId===accountKey;});
+  var repCount=new Set(recurring.map(function(e){return e.reportId;})).size;
+  document.getElementById('note-modal-sub').textContent=accountKey+(repCount>1?' · Recurring across '+repCount+' reports':'');
+  document.getElementById('note-modal').classList.add('open');
+  setTimeout(function(){document.getElementById('note-modal-textarea').focus();},50);
+}
+function closeNoteModal(){document.getElementById('note-modal').classList.remove('open');_noteModalKey=null;}
+function saveNote(){
+  if(!_noteModalKey)return;
+  var val=document.getElementById('note-modal-textarea').value.trim();
+  if(!db.notes)db.notes={};
+  if(val){db.notes[_noteModalKey]=val;}else{delete db.notes[_noteModalKey];}
+  saveDB();
+  sbSaveNote(_noteModalKey,val||null);
+  closeNoteModal();
+  renderErrorLog();
+  // Refresh open panel if it's showing this account
+  if(document.getElementById('acct-panel-overlay').classList.contains('open')){
+    var panelKey=document.getElementById('acct-panel').dataset.accountKey;
+    if(panelKey===_noteModalKey)openAcctPanel(_noteModalKey);
+  }
+}
+
+// ── MY TASKS ─────────────────────────────────────────────────────────
+var _currentUserEmail=null;
+var _currentUserId=null;
+
+function matchUserToTeam(email){
+  if(!email)return null;
+  var local=email.split('@')[0].toLowerCase().replace(/[._]/g,' ');
+  var best=null,bestScore=0;
+  db.users.forEach(function(u){
+    var uname=u.name.toLowerCase();
+    var score=0;
+    local.split(' ').forEach(function(part){if(part.length>1&&uname.includes(part))score++;});
+    if(score>bestScore){bestScore=score;best=u.id;}
+  });
+  return bestScore>0?best:null;
+}
+
+var _linkModalDismissable = false;
+var _linkModalSelectedId = null;
+
+function showLinkModal(dismissable) {
+  _linkModalDismissable = dismissable;
+  _linkModalSelectedId = _currentUserId || null;
+  document.getElementById('link-modal-email').textContent = _currentUserEmail || '';
+  document.getElementById('link-skip-btn').style.display = dismissable ? 'none' : 'inline-block';
+  // Render team member list
+  var list = document.getElementById('link-member-list');
+  if (!db.users.length) {
+    list.innerHTML = '<div style="font-size:13px;color:var(--text3);padding:16px;text-align:center">No team members added yet.<br>Ask an admin to add you in the Admin panel first.</div>';
+    document.getElementById('link-confirm-btn').disabled = true;
+    document.getElementById('link-confirm-btn').style.opacity = '.5';
+  } else {
+    list.innerHTML = db.users.filter(function(u){return u.active!==false;}).map(function(u) {
+      var col = getUserColor(u.id);
+      var init = getUserInitials(u.id);
+      var isSel = _linkModalSelectedId === u.id;
+      return '<button class="link-member-btn'+(isSel?' selected':'')+'" onclick="selectLinkMember(\''+u.id+'\',this)">'
+        +'<div style="width:36px;height:36px;border-radius:50%;background:'+col+'20;color:'+col+';display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;flex-shrink:0">'+init+'</div>'
+        +'<div><div class="link-member-name">'+u.name+'</div>'
+        +(u.role?'<div class="link-member-role">'+u.role+'</div>':'')
+        +(u.platforms&&u.platforms.length?'<div style="font-size:11px;color:var(--text3);margin-top:2px">'+u.platforms.slice(0,3).join(', ')+(u.platforms.length>3?' +more':'')+' </div>':'')
+        +'</div>'
+        +'<div style="margin-left:auto;font-size:18px;color:var(--text)">'+(isSel?'✓':'')+'</div>'
+        +'</button>';
+    }).join('');
+    var confirmBtn = document.getElementById('link-confirm-btn');
+    confirmBtn.disabled = !_linkModalSelectedId;
+    confirmBtn.style.opacity = _linkModalSelectedId ? '1' : '.5';
+  }
+  document.getElementById('link-modal').classList.add('open');
+}
+
+function selectLinkMember(userId, btn) {
+  _linkModalSelectedId = userId;
+  document.querySelectorAll('.link-member-btn').forEach(function(b) {
+    b.classList.remove('selected');
+    b.querySelector('div:last-child').textContent = '';
+  });
+  btn.classList.add('selected');
+  btn.querySelector('div:last-child').textContent = '✓';
+  var confirmBtn = document.getElementById('link-confirm-btn');
+  confirmBtn.disabled = false;
+  confirmBtn.style.opacity = '1';
+}
+
+function closeLinkModal() {
+  document.getElementById('link-modal').classList.remove('open');
+  _linkModalSelectedId = null;
+}
+
+function confirmLinkAccount() {
+  if (!_linkModalSelectedId) return;
+  _currentUserId = _linkModalSelectedId;
+  sbSaveUserLink(_currentUserEmail, _currentUserId);
+  updateUserBarLinked();
+  updateMyTasksBadge();
+  renderMyTasks();
+  closeLinkModal();
+}
+
+function skipLinkAccount() {
+  // Save a null link so we don't prompt again this session
+  _currentUserId = null;
+  updateUserBarUnlinked();
+  closeLinkModal();
+}
+
+function updateMyTasksBadge(){
+  if(!_currentUserId)return;
+  var assignCount=Object.values(db.assignments||{}).filter(function(uid){return uid===_currentUserId;}).length;
+  var overdueCount=ALL_PLATFORMS.filter(function(p){
+    if(!(db.platformAssignments&&db.platformAssignments[p]||[]).includes(_currentUserId))return false;
+    var st=getPlatformStatus(p);
+    return st.status==='overdue'||st.status==='never';
+  }).length;
+  var total=assignCount+overdueCount;
+  var badge=document.getElementById('my-tasks-badge');
+  if(!badge)return;
+  if(total>0){badge.textContent=total;badge.style.display='inline-block';}
+  else{badge.style.display='none';}
+}
+
+function renderMyTasks(){
+  var el=document.getElementById('mytasks-content');
+  var empty=document.getElementById('mytasks-empty');
+  if(!el||!empty)return;
+  if(!_currentUserId){
+    el.innerHTML='';empty.style.display='block';
+    empty.querySelector('.empty').textContent='Sign in to see your assigned tasks.';
+    return;
+  }
+
+  var html='';
+
+  // ── Upload responsibilities ───────────────────────────────
+  var myPlatforms=ALL_PLATFORMS.filter(function(p){
+    return (db.platformAssignments&&db.platformAssignments[p]||[]).includes(_currentUserId);
+  });
+  if(myPlatforms.length){
+    var overdueCount=0;
+    var platHtml=myPlatforms.map(function(p){
+      var st=getPlatformStatus(p);
+      if(st.status==='overdue'||st.status==='never')overdueCount++;
+      var pillClass=st.status;
+      var pillLabel={done:'✓ Updated this month',due:'⚠ Due this month',overdue:'✗ Overdue',never:'✗ Never uploaded'}[st.status];
+      var lastText=st.last?'Last uploaded: '+st.last.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'No uploads yet';
+      return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--border)">'
+        +platformBadge(p)
+        +'<div style="flex:1"><div style="font-size:12px;color:var(--text2)">'+lastText+'</div></div>'
+        +'<span class="plat-status-pill '+pillClass+'">'+pillLabel+'</span>'
+        +'</div>';
+    }).join('');
+    html+='<div class="card" style="margin-bottom:16px">'
+      +'<div style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--text3);margin-bottom:10px">Your platform uploads this month</div>'
+      +platHtml
+      +'</div>';
+  }
+
+  // ── Assigned errors ───────────────────────────────────────
+  if(!db.assignments){el.innerHTML=html;empty.style.display=html?'none':'block';return;}
+  var myKeys=Object.keys(db.assignments).filter(function(k){return db.assignments[k]===_currentUserId;});
+  var myErrors=activeErrors().filter(function(e){return myKeys.includes(_eKey(e));});
+  var open=myErrors.filter(function(e){return!db.resolved[_eKey(e)];});
+  var done=myErrors.filter(function(e){return!!db.resolved[_eKey(e)];});
+
+  if(!myErrors.length&&!myPlatforms.length){el.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+
+  if(open.length){
+    html+='<div style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--text3);margin-bottom:10px">Open errors ('+open.length+')</div>';
+    html+=open.map(function(r){return renderTaskCard(r,false);}).join('');
+  }
+  if(done.length){
+    html+='<div style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--text3);margin:'+(open.length?'24px':'0')+'px 0 10px">Resolved errors ('+done.length+')</div>';
+    html+=done.map(function(r){return renderTaskCard(r,true);}).join('');
+  }
+  el.innerHTML=html;
+}
+
+function renderTaskCard(r,isResolved){
+  var k=_eKey(r);
+  var noteKey=r.accountId||r.clientId||'';
+  var note=(db.notes&&db.notes[noteKey])?db.notes[noteKey]:'';
+  var rAt=isResolved&&db.resolved[k]?new Date(db.resolved[k].ts).toLocaleDateString('en-GB',{day:'numeric',month:'short'}):null;
+  return '<div class="task-card'+(isResolved?' task-done':'')+'">'
+    +'<div style="display:flex;align-items:flex-start;gap:10px">'
+    +'<input type="checkbox" class="rcb" '+(isResolved?'checked ':'')+'onchange="toggleResolvedKey(\''+k+'\')" style="margin-top:3px;flex-shrink:0;width:15px;height:15px;cursor:pointer">'
+    +'<div style="flex:1;min-width:0">'
+    +'<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:5px">'
+    +catBadge(r.category||'unknown')+platformBadge(r.platform)
+    +(r.accountId?'<span class="id-pill" style="font-size:11px">'+r.accountId+'</span>':'')
+    +'</div>'
+    +'<div style="font-weight:500;font-size:13px;margin-bottom:2px;cursor:pointer;text-decoration:underline;text-decoration-color:var(--border-med)" onclick="openAcctPanel(\''+(r.accountId||r.clientId||'')+'\')">'+( r.client||'Unknown client')+'</div>'
+    +'<div style="font-size:12px;color:var(--text2);margin-bottom:6px">'+r.error+'</div>'
+    +'<div style="font-size:11px;color:var(--text3);display:flex;gap:12px;flex-wrap:wrap">'
+    +(r.firm?'<span>Firm: '+r.firm+'</span>':'')
+    +(r.adviser?'<span>Adviser: '+r.adviser+'</span>':'')
+    +'<span>Report: '+(r.reportLabel||'—')+'</span>'
+    +(isResolved&&rAt?'<span style="color:#16a34a;font-weight:500">✓ Fixed '+rAt+'</span>':'')
+    +'</div>'
+    +(note?'<div style="margin-top:8px;font-size:12px;color:var(--text2);background:var(--surface2);padding:6px 10px;border-radius:6px;border-left:3px solid var(--border-med)">'+note+'</div>':'')
+    +'</div>'
+    +'<button onclick="openNoteModal(\''+noteKey+'\',this)" style="flex-shrink:0;font-size:11px;color:var(--text3);padding:3px 8px;border-radius:6px;border:0.5px solid var(--border-med);background:none;cursor:pointer">'+(note?'Edit note':'+ Note')+'</button>'
+    +'</div>'
+    +'</div>';
+}
+
+function toggleResolvedKey(k){
+  toggleResolved(k);
+}
+function renderErrorLog(){
+  if(!db.resolved)db.resolved={};
+  var vp=document.getElementById('fp')?document.getElementById('fp').value:'';
+  var vc=document.getElementById('fc')?document.getElementById('fc').value:'';
+  var vr=document.getElementById('fr')?document.getElementById('fr').value:'';
+  var vst=document.getElementById('fst')?document.getElementById('fst').value:'';
+  var vrep=document.getElementById('frep')?document.getElementById('frep').value:'';
+  var vfi=document.getElementById('ffi')?document.getElementById('ffi').value:'';
+  var vad=document.getElementById('fad')?document.getElementById('fad').value:'';
+  var vcl=document.getElementById('fcl')?document.getElementById('fcl').value:'';
+  var vasgn=document.getElementById('fasgn')?document.getElementById('fasgn').value:'';
+  var fq=(document.getElementById('filter-search')?document.getElementById('filter-search').value:'').toLowerCase();
+  var filtered=activeErrors().filter(function(e){
+    if(vp&&e.platform!==vp)return false;
+    if(vc&&e.category!==vc)return false;
+    if(vr&&e.resolution!==vr)return false;
+    if(activeCatFilter&&e.category!==activeCatFilter)return false;
+    if(vrep&&e.reportId!==vrep)return false;
+    if(vfi&&e.firm!==vfi)return false;
+    if(vad&&e.adviser!==vad)return false;
+    if(vcl&&e.client!==vcl)return false;
+    var ek=_eKey(e);
+    var asgnUser=db.assignments&&db.assignments[ek]?db.assignments[ek]:null;
+    if(vasgn==='__unassigned__'&&asgnUser)return false;
+    if(vasgn&&vasgn!=='__unassigned__'&&asgnUser!==vasgn)return false;
+    var isRes=!!(db.resolved[_eKey(e)]);
+    if(vst==='open'&&isRes)return false;
+    if(vst==='resolved'&&!isRes)return false;
+    if(fq&&![e.client,e.adviser,e.accountId,e.error,e.firm].filter(Boolean).join(' ').toLowerCase().includes(fq))return false;
+    return true;
+  });
+  if(_elSort.key){
+    filtered=filtered.slice().sort(function(a,b){
+      var av=(a[_elSort.key]||'').toString().toLowerCase();
+      var bv=(b[_elSort.key]||'').toString().toLowerCase();
+      return av<bv?-_elSort.dir:av>bv?_elSort.dir:0;
+    });
+  }
+  var tbody=document.getElementById('error-log-body');
+  var empty=document.getElementById('error-log-empty');
+  var countEl=document.getElementById('error-log-count');
+  if(!filtered.length){tbody.innerHTML='';empty.style.display='block';countEl.textContent='';
+    document.getElementById('el-prev').style.display='none';
+    document.getElementById('el-next').style.display='none';
+    document.getElementById('el-page-pills').innerHTML='';
+    return;}
+  empty.style.display='none';
+  _elFiltered=filtered;
+  _elPage=0;
+  renderErrorLogPage();
+}
+
+function renderErrorLogPage(){
+  var tbody=document.getElementById('error-log-body');
+  var countEl=document.getElementById('error-log-count');
+  var prevBtn=document.getElementById('el-prev');
+  var nextBtn=document.getElementById('el-next');
+  var pills=document.getElementById('el-page-pills');
+  if(!tbody||!_elFiltered.length)return;
+
+  var totalPages=Math.ceil(_elFiltered.length/_elPageSize);
+  var start=_elPage*_elPageSize;
+  var shown=_elFiltered.slice(start,start+_elPageSize);
+
+  countEl.textContent='Showing '+(start+1)+'–'+(start+shown.length)+' of '+_elFiltered.length+' errors';
+
+  // Prev / Next buttons
+  prevBtn.style.display=_elPage>0?'inline-block':'none';
+  nextBtn.style.display=_elPage<totalPages-1?'inline-block':'none';
+
+  // Page number pills (show up to 7)
+  var pillHtml='';
+  if(totalPages>1){
+    var start_p=Math.max(0,_elPage-3);
+    var end_p=Math.min(totalPages-1,start_p+6);
+    if(start_p>0)pillHtml+='<span style="font-size:12px;color:var(--text3);padding:0 4px">…</span>';
+    for(var i=start_p;i<=end_p;i++){
+      var active=i===_elPage;
+      pillHtml+='<button onclick="elGoToPage('+i+')" style="min-width:30px;padding:4px 8px;font-size:12px;border-radius:6px;border:0.5px solid '+(active?'var(--text)':'var(--border-med)')+';background:'+(active?'var(--text)':'var(--surface)')+';color:'+(active?'#fff':'var(--text2)')+';">'+(i+1)+'</button>';
+    }
+    if(end_p<totalPages-1)pillHtml+='<span style="font-size:12px;color:var(--text3);padding:0 4px">…</span>';
+  }
+  pills.innerHTML=pillHtml;
+
+  _rowKeys={};
+  tbody.innerHTML=shown.map(function(r){
+    var k=_eKey(r);
+    var isRes=!!(db.resolved[k]);
+    var rAt=isRes?new Date(db.resolved[k].ts).toLocaleDateString('en-GB',{day:'numeric',month:'short'}):null;
+    var asgnUserId=db.assignments&&db.assignments[k]?db.assignments[k]:null;
+    var noteKey=r.accountId||r.clientId||'';
+    var noteVal=(db.notes&&db.notes[noteKey])?db.notes[noteKey]:'';
+    _rowKeys[shown.indexOf(r)] = k;
+    return '<tr class="'+(isRes?'is-res':'')+'">'
+      +'<td>'+catBadge(r.category||'unknown')+'</td>'
+      +'<td>'+platformBadge(r.platform)+'</td>'
+      +'<td class="mono" style="font-size:12px;white-space:nowrap">'+(r.accountId?'<span style="cursor:pointer;text-decoration:underline;text-decoration-color:var(--border-med)" onclick="openAcctPanel(\''+r.accountId+'\')">'+r.accountId+'</span>':'—')+'</td>'
+      +'<td style="white-space:nowrap">'+(r.client?'<span style="cursor:pointer" onclick="openAcctPanel(\''+(r.accountId||r.clientId||'')+'\')">'+r.client+'</span>':'—')+'</td>'
+      +'<td style="white-space:nowrap;font-size:12px;color:var(--text2)">'+(r.adviser||'—')+'</td>'
+      +'<td style="white-space:nowrap;font-size:12px;color:var(--text2)">'+(r.firm||'—')+'</td>'
+      +'<td><span style="font-size:11px;color:var(--text3)">'+(r.reportLabel||'')+'</span></td>'
+      +'<td style="min-width:340px"><div style="white-space:normal;word-break:break-word;font-size:12px;color:var(--text2);line-height:1.5">'+r.error+'</div></td>'
+      +'<td style="min-width:140px">'+renderAssignCell(k,asgnUserId)+'</td>'
+      +'<td style="min-width:180px">'+renderNoteCell(noteKey,noteVal)+'</td>'
+      +'<td>'+(isRes?'<span class="st-pending">Pending next import</span>'+(rAt?'<div style="font-size:10px;color:var(--text3);margin-top:2px">Fixed '+rAt+'</div>':''):'<span class="st-open">Open</span>')+'</td>'
+      +'<td style="text-align:center"><input type="checkbox" class="rcb" '+(isRes?'checked ':'')+' data-idx="'+shown.indexOf(r)+'" onchange="toggleResolvedIdx(this)"></td>'
+      +'</tr>';
+  }).join('');
+  _applyHidden();
+}
+
+function elGoToPage(p){
+  _elPage=p;
+  renderErrorLogPage();
+  document.getElementById('elt').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function renderOverview(){
+  const errors = activeErrors();  // already excludes cleared and low-balance
+
+  // Resolved / outstanding counts
+  const resolvedCount = errors.filter(e => !!db.resolved[_eKey(e)]).length;
+  const outstandingCount = errors.length - resolvedCount;
+  const lowBalCount = db.errors.filter(e => e.category === 'low-balance' && !db.cleared[_eKey(e)]).length;
+
+  document.getElementById('ov-total').textContent = errors.length.toLocaleString();
+  document.getElementById('ov-outstanding').textContent = outstandingCount.toLocaleString();
+  document.getElementById('ov-resolved').textContent = resolvedCount.toLocaleString();
+  document.getElementById('ov-lowbal').textContent = lowBalCount.toLocaleString();
+  document.getElementById('ov-reports') && (document.getElementById('ov-reports').textContent = db.reports.length);
+  renderPlatformTracker();
+
+  // Recurring accounts
+  const ac = {};
+  errors.filter(e => e.accountId).forEach(e => { ac[e.accountId] = (ac[e.accountId] || 0) + 1; });
+  const rec = Object.entries(ac).filter(([, c]) => c > 1);
+  document.getElementById('ov-recurring').textContent = rec.length;
+
+  // Charts
+  renderBars('ov-platform-bars', countBy(errors, 'platform'), platformColor);
+  renderBars('ov-cat-bars', countBy(errors, 'category'), cat => CAT_DEFS[cat]?.color || '#6b7280');
+  renderBars('ov-res-bars', countBy(errors, 'resolution'), res => RES_META[res]?.color || '#6b7280');
+
+  // Recurring accounts table
+  const tr = rec.sort((a, b) => b[1] - a[1]).slice(0, 6);
+  const rl = document.getElementById('ov-recurring-list');
+  if (!tr.length) {
+    rl.innerHTML = '<div class="empty">No recurring accounts yet — upload multiple reports to track recurring errors</div>';
+  } else {
+    rl.innerHTML = `<div style="overflow-x:auto"><table><thead><tr><th>Account ID</th><th>Platform</th><th>Client</th><th>Errors</th><th>Reports</th><th>Category</th></tr></thead><tbody>${
+      tr.map(([id, cnt]) => {
+        const s = errors.find(e => e.accountId === id) || {};
+        const rp = new Set(errors.filter(e => e.accountId === id).map(e => e.reportId)).size;
+        return `<tr style="cursor:pointer" onclick="openAccount('${id}')"><td class="mono" style="font-size:12px">${id}</td><td>${platformBadge(s.platform)}</td><td>${s.client || '—'}</td><td style="font-weight:600;color:#dc2626">${cnt}</td><td style="color:var(--text2)">${rp}</td><td>${catBadge(s.category || 'unknown')}</td></tr>`;
+      }).join('')
+    }</tbody></table></div>`;
+  }
+
+  // Recent errors
+  const re = document.getElementById('ov-recent');
+  if (!errors.length) { re.innerHTML = '<div class="empty">Upload a report to see errors here</div>'; return; }
+  const last = [...errors].reverse().slice(0, 10);
+  re.innerHTML = `<div style="overflow-x:auto"><table><thead><tr><th>Category</th><th>Platform</th><th>Account ID</th><th>Client</th><th>Report</th><th>Status</th><th>Error</th></tr></thead><tbody>${
+    last.map(r => {
+      const k = _eKey(r);
+      const isRes = !!db.resolved[k];
+      return `<tr style="cursor:pointer" onclick="openAccount('${r.accountId || r.clientId || ''}')">
+        <td>${catBadge(r.category || 'unknown')}</td>
+        <td>${platformBadge(r.platform)}</td>
+        <td class="mono" style="font-size:12px;white-space:nowrap">${r.accountId || '—'}</td>
+        <td style="white-space:nowrap">${r.client || '—'}</td>
+        <td><span style="font-size:11px;color:var(--text3)">${r.reportLabel || ''}</span></td>
+        <td>${isRes ? '<span class="st-pending">Resolved</span>' : '<span class="st-open">Open</span>'}</td>
+        <td><div style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px;color:var(--text2)" title="${r.error}">${r.error}</div></td>
+      </tr>`;
+    }).join('')
+  }</tbody></table></div>`;
+}
+
+function renderAccountSearch(){
+  const q=document.getElementById('acct-search').value.trim().toLowerCase(),el=document.getElementById('acct-results');
+  if(!q){el.innerHTML='<div class="empty">Type above to search the error history database</div>';return;}
+  if(!db.errors.length){el.innerHTML='<div class="empty">No data stored yet — upload a report first.</div>';return;}
+  const matched=activeErrors().filter(e=>(e.accountId&&e.accountId.toLowerCase().includes(q))||(e.clientId&&e.clientId.toLowerCase().includes(q))||(e.client&&e.client.toLowerCase().includes(q))||(e.adviser&&e.adviser.toLowerCase().includes(q)));
+  if(!matched.length){el.innerHTML='<div class="empty">No matching accounts found</div>';return;}
+  const grouped={};matched.forEach(e=>{const key=e.accountId||e.clientId||(e.client||'?')+'-'+(e.adviser||'');if(!grouped[key])grouped[key]=[];grouped[key].push(e);});
+  el.innerHTML=Object.entries(grouped).map(([key,errs])=>renderAccountCard(key,errs)).join('');
+}
+function openAccount(id){if(!id)return;openAcctPanel(id);}
+
+function closeAcctPanel(){
+  document.getElementById('acct-panel-overlay').classList.remove('open');
+  document.getElementById('acct-panel').dataset.accountKey='';
+}
+
+function openAcctPanel(accountKey){
+  if(!accountKey)return;
+  var panel=document.getElementById('acct-panel');
+  panel.dataset.accountKey=accountKey;
+
+  // Gather all active (non-cleared) errors for this account
+  var all=activeErrors().filter(function(e){
+    return e.accountId===accountKey||e.clientId===accountKey;
+  });
+  if(!all.length){
+    var refErr=activeErrors().find(function(e){return e.accountId===accountKey||e.clientId===accountKey;});
+    if(!refErr)refErr=activeErrors().find(function(e){return(e.accountId||e.clientId||'').includes(accountKey);});
+    if(refErr)all=activeErrors().filter(function(e){return e.accountId===refErr.accountId&&refErr.accountId||e.client===refErr.client;});
+  }
+  var s=all[0]||{};
+  var dn=s.client||s.accountId||accountKey||'Unknown account';
+  var init=dn.split(/\s+/).map(function(w){return w[0]||'';}).join('').toUpperCase().slice(0,2)||'?';
+  var ra=new Set(all.map(function(e){return e.reportId;})).size;
+  var ir=ra>1;
+  var cats=[...new Set(all.map(function(e){return e.category||'unknown';}))];
+
+  // Header
+  document.getElementById('ap-initials').textContent=init;
+  document.getElementById('ap-name').textContent=dn;
+  var idsHtml='';
+  if(s.accountId)idsHtml+='<span class="id-pill">'+s.accountId+'</span>';
+  if(s.clientId&&s.clientId!==s.accountId)idsHtml+='<span class="id-pill">'+s.clientId+'</span>';
+  document.getElementById('ap-ids').innerHTML=idsHtml;
+  document.getElementById('ap-recur-badge').innerHTML=ir
+    ?'<span class="badge b-recur">Recurring</span>'
+    :'<span class="badge b-new">New</span>';
+  document.getElementById('ap-badges').innerHTML=
+    (s.platform?platformBadge(s.platform):'')+
+    cats.map(function(c){return catBadge(c);}).join('');
+
+  // Info grid
+  var asgnKey=_eKey(all[all.length-1]||{});
+  var asgnUserId=db.assignments&&db.assignments[asgnKey]?db.assignments[asgnKey]:null;
+  // Check any error on this account for assignment
+  var anyAssign=null;
+  all.forEach(function(e){var k=_eKey(e);if(db.assignments&&db.assignments[k])anyAssign=db.assignments[k];});
+
+  var totalErrors=all.length;
+  var resolvedCount=all.filter(function(e){return!!db.resolved[_eKey(e)];}).length;
+  var openCount=totalErrors-resolvedCount;
+  var lastSeen=all.reduce(function(latest,e){return e.ts>latest?e.ts:latest;},'');
+  var lastReport=all.find(function(e){return e.ts===lastSeen;})||s;
+
+  document.getElementById('ap-info-grid').innerHTML=
+    infoCell('Firm',s.firm||'—')+
+    infoCell('Adviser',s.adviser||'—')+
+    infoCell('Total appearances',totalErrors+' error'+(totalErrors!==1?'s':'')+' across '+ra+' report'+(ra!==1?'s':''))+
+    infoCell('Status',openCount>0
+      ?'<span style="color:#dc2626;font-weight:600">'+openCount+' open</span>'+(resolvedCount?' <span style="color:var(--text3);font-weight:400;font-size:12px">/ '+resolvedCount+' resolved</span>':'')
+      :'<span style="color:#16a34a;font-weight:600">All resolved</span>')+
+    infoCell('Last seen',lastSeen?new Date(lastSeen).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'—')+
+    infoCell('Assigned to',anyAssign?getUserName(anyAssign):'<span style="color:var(--text3)">Unassigned</span>');
+
+  // Note block
+  var note=(db.notes&&db.notes[accountKey])?db.notes[accountKey]:'';
+  if(note){
+    document.getElementById('ap-note-text').textContent=note;
+    document.getElementById('ap-note-block').style.display='block';
+    document.getElementById('ap-no-note-block').style.display='none';
+    document.getElementById('ap-note-edit-btn').onclick=function(){openNoteModal(accountKey,this);};
+  } else {
+    document.getElementById('ap-note-block').style.display='none';
+    document.getElementById('ap-no-note-block').style.display='block';
+    document.getElementById('ap-add-note-btn').onclick=function(){openNoteModal(accountKey,this);};
+  }
+
+  // Build audit trail — merge error appearances and resolve history events
+  var events=[];
+
+  // Each error appearance is an "appeared" event
+  all.forEach(function(e){
+    var k=_eKey(e);
+    var isRes=!!db.resolved[k];
+    var resData=db.resolved[k]||null;
+    events.push({
+      type:'appeared',
+      ts:e.ts,
+      error:e,
+      errorKey:k,
+      isCurrentlyResolved:isRes,
+      resolvedData:resData
+    });
+  });
+
+  // All resolve/unresolve history events for this account
+  (db.resolveHistory||[]).forEach(function(h){
+    if(h.accountKey===accountKey){
+      events.push({type:h.action,ts:h.ts,histEntry:h});
+    }
+  });
+
+  // Sort chronologically
+  events.sort(function(a,b){return a.ts<b.ts?-1:a.ts>b.ts?1:0;});
+
+  // Mark any "appeared" event that comes after at least one "resolved" event
+  // as a reappearance — this flags when a fix didn't stick
+  var hasBeenResolvedBefore=false;
+  events.forEach(function(ev){
+    if(ev.type==='resolved')hasBeenResolvedBefore=true;
+    if(ev.type==='appeared'&&hasBeenResolvedBefore){
+      ev.isReappearance=true;
+    }
+  });
+
+  // Render
+  var auditHtml='';
+  if(!events.length){
+    auditHtml='<div class="empty">No history yet</div>';
+  } else {
+    auditHtml=events.map(function(ev,i){
+      var isLast=(i===events.length-1);
+      var dotColor='#6b7280';
+      var labelHtml='';
+      var metaHtml='';
+      var bodyHtml='';
+
+      if(ev.type==='appeared'){
+        var e=ev.error;
+        var k=ev.errorKey;
+        var cat=CAT_DEFS[e.category||'unknown']||CAT_DEFS.unknown;
+        dotColor=ev.isReappearance?'#dc2626':cat.color;
+        labelHtml='<span style="color:'+(ev.isReappearance?'#dc2626':cat.color)+'">'+cat.label+'</span> appeared in <strong>'+(e.reportLabel||'Unknown report')+'</strong>';
+        if(ev.isReappearance){
+          labelHtml+=' <span style="display:inline-block;font-size:10px;font-weight:700;background:#fee2e2;color:#991b1b;padding:2px 7px;border-radius:99px;margin-left:4px;letter-spacing:.03em">⚠ Reappeared after resolve</span>';
+        }
+        metaHtml=new Date(e.ts).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+        bodyHtml='<div style="font-size:12px;color:var(--text2);margin-top:4px;line-height:1.5">'+e.error+'</div>';
+        if(ev.isReappearance){
+          bodyHtml+='<div style="margin-top:6px;font-size:11px;background:#fee2e2;color:#991b1b;padding:6px 10px;border-radius:6px;line-height:1.5">This error was previously marked as resolved but has reappeared in a new report. The fix may not have worked or the issue has recurred.</div>';
+        }
+        // Show current resolved/cleared state
+        if(db.cleared&&db.cleared[k]){
+          var cl=db.cleared[k];
+          bodyHtml+='<div style="margin-top:6px;font-size:11px;background:#f0fdf4;color:#166534;padding:4px 8px;border-radius:6px;display:inline-block">✓ Resolved and cleared — did not reappear in <strong>'+(cl.clearedByReport||'new report')+'</strong></div>';
+        } else if(ev.isCurrentlyResolved&&ev.resolvedData){
+          var rByName=ev.resolvedData.userId?getUserName(ev.resolvedData.userId):null;
+          if(rByName){
+            bodyHtml+='<div style="margin-top:6px;font-size:11px;background:#dcfce7;color:#166534;padding:4px 8px;border-radius:6px;display:inline-block">✓ Currently marked resolved by '+rByName+'</div>';
+          }
+        }
+        // Show assignment if any
+        var asgn=db.assignments&&db.assignments[k]?db.assignments[k]:null;
+        if(asgn)bodyHtml+='<div style="margin-top:4px;font-size:11px;color:var(--text3)">Assigned to: <strong style="color:var(--text2)">'+getUserName(asgn)+'</strong></div>';
+
+      } else if(ev.type==='resolved'){
+        var h=ev.histEntry;
+        dotColor='#16a34a';
+        var who=h.userName||'Unknown user';
+        labelHtml='Marked resolved by <strong>'+who+'</strong>';
+        metaHtml=new Date(h.ts).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+        if(h.noteAtTime){
+          bodyHtml='<div class="audit-note-bubble">Note at time of resolve: '+h.noteAtTime+'</div>';
+        }
+
+      } else if(ev.type==='unresolved'){
+        var h=ev.histEntry;
+        dotColor='#d97706';
+        var who=h.userName||'Unknown user';
+        labelHtml='Reopened (un-resolved) by <strong>'+who+'</strong>';
+        metaHtml=new Date(h.ts).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+        bodyHtml='<div style="font-size:12px;color:var(--text3);margin-top:4px">Error was ticked as resolved but has re-appeared or was reopened.</div>';
+        if(h.noteAtTime){
+          bodyHtml+='<div class="audit-note-bubble" style="margin-top:6px">Note at time: '+h.noteAtTime+'</div>';
+        }
+      }
+
+      return '<div class="audit-row">'
+        +'<div class="audit-line-col">'
+        +'<div class="audit-dot" style="background:'+dotColor+'"></div>'
+        +(isLast?'':'<div class="audit-line"></div>')
+        +'</div>'
+        +'<div class="audit-content">'
+        +'<div class="audit-event-label">'+labelHtml+'</div>'
+        +'<div class="audit-event-meta">'+metaHtml+'</div>'
+        +bodyHtml
+        +'</div>'
+        +'</div>';
+    }).join('');
+  }
+  document.getElementById('ap-audit-trail').innerHTML=auditHtml;
+
+  document.getElementById('acct-panel-overlay').classList.add('open');
+}
+
+function infoCell(label,value){
+  return '<div class="info-cell"><div class="info-cell-label">'+label+'</div><div class="info-cell-value">'+value+'</div></div>';
+}
+
+function renderAccountCard(key,errs){
+  // Lightweight card for search results — clicking opens the full panel
+  const s=errs[0],dn=s.client||s.accountId||'Unknown';
+  const init=dn.split(/\s+/).map(w=>w[0]).join('').toUpperCase().slice(0,2)||'?';
+  const all=activeErrors().filter(e=>{if(s.accountId)return e.accountId===s.accountId;if(s.clientId)return e.clientId===s.clientId;return e.client===s.client&&e.adviser===s.adviser;});
+  const ra=new Set(all.map(e=>e.reportId)).size,ir=ra>1;
+  const cats=[...new Set(all.map(e=>e.category||'unknown'))];
+  const accKey=s.accountId||s.clientId||key;
+  return`<div class="acct-card" style="cursor:pointer" onclick="openAcctPanel('${accKey}')">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+      <div class="initials-circle">${init}</div>
+      <div style="flex:1">
+        <div style="font-weight:600;font-size:15px">${dn}</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:3px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+          ${s.accountId?`<span class="id-pill">${s.accountId}</span>`:''}
+          ${s.clientId?`<span class="id-pill">${s.clientId}</span>`:''}
+          ${platformBadge(s.platform)}
+          ${cats.map(c=>catBadge(c)).join('')}
+        </div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        ${ir?'<span class="badge b-recur">Recurring</span>':'<span class="badge b-new">New</span>'}
+        <div style="font-size:12px;color:var(--text2);margin-top:4px">${all.length} error${all.length!==1?'s':''} · ${ra} report${ra!==1?'s':''}</div>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--text2)">Firm: ${s.firm||'—'} · Adviser: ${s.adviser||'—'}</div>
+    <div style="font-size:11px;color:var(--text3);margin-top:8px">Click to view full account history →</div>
+  </div>`;
+}
+
+function renderHistoryList(){
+  const el=document.getElementById('history-list');
+  if(!db.reports.length){el.innerHTML='<div class="empty">No reports uploaded yet</div>';return;}
+  el.innerHTML=`<table><thead><tr><th>Label</th><th>Uploaded by</th><th>Platforms</th><th>Uploaded</th><th>Errors</th><th>Expected</th><th></th></tr></thead><tbody>${[...db.reports].reverse().map(r=>`<tr><td style="font-weight:500">${r.label}</td><td>${r.uploadedBy?`<div style="display:flex;align-items:center;gap:7px">${avatarHtml(r.uploadedBy,26)}<span style="font-size:13px">${getUserName(r.uploadedBy)}</span></div>`:'<span style="font-size:12px;color:var(--text3)">—</span>'}</td><td>${(r.platforms||[]).map(p=>platformBadge(p)).join(' ')||'—'}</td><td style="font-size:12px;color:var(--text2);white-space:nowrap">${new Date(r.ts).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}</td><td style="font-weight:500">${r.count}</td><td>${r.expected>0?(r.count===r.expected?`<span style="color:#16a34a;font-weight:500">${r.expected} ✓</span>`:`<span style="color:#d97706">${r.expected}</span>`):'-'}</td><td><button class="danger" onclick="deleteReport('${r.id}')" style="font-size:12px;padding:4px 10px">Delete</button></td></tr>`).join('')}</tbody></table>`;
+}
+function deleteReport(rid){if(!confirm('Delete this report and all its errors?'))return;db.reports=db.reports.filter(function(r){return r.id!==rid;});db.errors=db.errors.filter(function(e){return e.reportId!==rid;});db.uploadLog=db.uploadLog.filter(function(l){return l.reportId!==rid;});saveDB();sbDeleteReport(rid);renderOverview();renderHistoryList();populateFilters();renderAdminLog();}
+
+function populateAdminFilters(){
+  const us=document.getElementById('log-filter-user');const cur=us.value;
+  us.innerHTML='<option value="">All team members</option>';
+  db.users.forEach(u=>{const o=document.createElement('option');o.value=u.id;o.textContent=u.name;us.appendChild(o);});us.value=cur;
+  const ps=document.getElementById('log-filter-platform');const curp=ps.value;
+  ps.innerHTML='<option value="">All platforms</option>';
+  ALL_PLATFORMS.forEach(p=>{const o=document.createElement('option');o.value=p;o.textContent=p;ps.appendChild(o);});ps.value=curp;
+}
+
+function renderAdminLog(){
+  populateAdminFilters();
+  const fu=document.getElementById('log-filter-user').value,fp=document.getElementById('log-filter-platform').value,fq=document.getElementById('log-filter-search').value.toLowerCase();
+  const filtered=db.uploadLog.filter(l=>{
+    if(fu&&l.userId!==fu)return false;if(fp&&!(l.platforms||[]).includes(fp))return false;
+    if(fq&&!(l.reportLabel||'').toLowerCase().includes(fq))return false;return true;
+  }).sort((a,b)=>b.ts.localeCompare(a.ts));
+  const tbody=document.getElementById('admin-log-body'),empty=document.getElementById('admin-log-empty');
+  if(!filtered.length){tbody.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  tbody.innerHTML=filtered.map(l=>`<tr>
+    <td><div style="display:flex;align-items:center;gap:8px">${l.userId?avatarHtml(l.userId,30):'<div style="width:30px;height:30px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text3)">?</div>'}<div><div style="font-weight:500">${l.userId?getUserName(l.userId):'Not recorded'}</div>${l.userId&&db.users.find(u=>u.id===l.userId)?.role?`<div style="font-size:11px;color:var(--text3)">${db.users.find(u=>u.id===l.userId).role}</div>`:''}</div></div></td>
+    <td style="font-weight:500">${l.reportLabel||'—'}</td>
+    <td>${(l.platforms||[]).map(p=>platformBadge(p)).join(' ')||'<span style="color:var(--text3);font-size:12px">Unknown</span>'}</td>
+    <td style="font-weight:500">${l.errorCount}</td>
+    <td style="font-size:12px;color:var(--text2);white-space:nowrap">${new Date(l.ts).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}<br><span style="font-size:11px;color:var(--text3)">${new Date(l.ts).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}</span></td>
+    <td>${l.expected>0?(l.matched?'<span class="cat-badge" style="background:#dcfce7;color:#166534">Matched</span>':'<span class="cat-badge" style="background:#fef3c7;color:#92400e">Mismatch</span>'):'<span style="font-size:11px;color:var(--text3)">—</span>'}</td>
+  </tr>`).join('');
+}
+
+function renderCoverageGrid(){
+  const el=document.getElementById('coverage-grid');
+  el.innerHTML=`<table><thead><tr><th>Platform</th><th>Last uploaded</th><th>By</th><th>Reports</th><th>Assigned to</th></tr></thead><tbody>${ALL_PLATFORMS.map(p=>{
+    const logs=db.uploadLog.filter(l=>(l.platforms||[]).includes(p)).sort((a,b)=>b.ts.localeCompare(a.ts));
+    const last=logs[0];
+    const assignedIds=(db.platformAssignments&&db.platformAssignments[p])||[];
+    const assigned=assignedIds.map(function(id){return db.users.find(function(u){return u.id===id;});}).filter(Boolean);
+    return`<tr><td>${platformBadge(p)}</td><td style="font-size:13px">${last?new Date(last.ts).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'<span style="color:var(--text3)">Never</span>'}</td><td>${last&&last.userId?`<div style="display:flex;align-items:center;gap:6px">${avatarHtml(last.userId,24)}<span style="font-size:12px">${getUserName(last.userId)}</span></div>`:'<span style="font-size:12px;color:var(--text3)">—</span>'}</td><td style="font-weight:500">${logs.length}</td><td>${assigned.length?assigned.map(u=>`<div style="display:flex;align-items:center;gap:5px;margin-bottom:2px">${avatarHtml(u.id,20)}<span style="font-size:12px">${u.name}</span></div>`).join(''):'<span style="font-size:12px;color:var(--text3)">Unassigned</span>'}</td></tr>`;
+  }).join('')}</tbody></table>`;
+}
+
+// ── PLATFORM TRACKER ──────────────────────────────────────────────────
+function isSuperAdmin() {
+  if (!_currentUserId) return false;
+  var u = db.users.find(function(u){ return u.id === _currentUserId; });
+  return u && u.isSuperAdmin;
+}
+
+function getPlatformStatus(platform) {
+  var now = new Date();
+  var thisMonth = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+  var logs = db.uploadLog.filter(function(l){
+    return (l.platforms||[]).includes(platform);
+  }).sort(function(a,b){ return b.ts.localeCompare(a.ts); });
+  if (!logs.length) return {status:'never', last:null, lastLog:null};
+  var last = new Date(logs[0].ts);
+  var lastMonth = last.getFullYear() + '-' + String(last.getMonth()+1).padStart(2,'0');
+  var status = lastMonth === thisMonth ? 'done'
+    : (last >= new Date(now.getFullYear(), now.getMonth()-1, 1)) ? 'due'
+    : 'overdue';
+  return {status, last, lastLog: logs[0]};
+}
+
+function renderPlatformTracker() {
+  var grid = document.getElementById('ov-plat-grid');
+  var monthEl = document.getElementById('ov-plat-month');
+  if (!grid) return;
+  var now = new Date();
+  monthEl.textContent = now.toLocaleDateString('en-GB', {month:'long', year:'numeric'});
+
+  var done = 0;
+  grid.innerHTML = ALL_PLATFORMS.map(function(p) {
+    var st = getPlatformStatus(p);
+    var assignedIds = (db.platformAssignments && db.platformAssignments[p]) || [];
+    var assigned = assignedIds.map(function(id){ return db.users.find(function(u){ return u.id===id; }); }).filter(Boolean);
+    if (st.status === 'done') done++;
+
+    var pillClass = st.status;
+    var pillLabel = {done:'✓ Updated', due:'⚠ Due', overdue:'✗ Overdue', never:'— Never uploaded'}[st.status];
+    var lastText = st.last
+      ? 'Last: ' + st.last.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})
+        + (st.lastLog && st.lastLog.userId ? ' by ' + getUserName(st.lastLog.userId) : '')
+      : 'No reports yet';
+
+    // Can current user edit this platform's assignment?
+    var canEdit = isSuperAdmin() || (assignedIds.includes(_currentUserId));
+    // Super admin sees all dropdowns; regular user only sees their own platforms
+    var canAssignOthers = isSuperAdmin();
+
+    // Build assignee pills + assign UI
+    var assignHtml = '<div class="plat-assign-row">';
+    if (assigned.length) {
+      assignHtml += assigned.map(function(u){
+        return '<div style="display:flex;align-items:center;gap:4px">'+avatarHtml(u.id,20)+'<span style="font-size:11px;color:var(--text2)">'+u.name+'</span></div>';
+      }).join('');
+    } else {
+      assignHtml += '<span style="font-size:11px;color:var(--text3)">Unassigned</span>';
+    }
+    // Assign self button — visible to all if not already assigned
+    if (_currentUserId && !assignedIds.includes(_currentUserId)) {
+      assignHtml += '<button onclick="assignSelfToPlatform(\''+p+'\')" style="font-size:10px;padding:2px 7px;border-radius:99px;border:0.5px dashed var(--border-med);background:none;cursor:pointer;color:var(--text3)">+ Assign me</button>';
+    } else if (_currentUserId && assignedIds.includes(_currentUserId)) {
+      assignHtml += '<button onclick="unassignSelfFromPlatform(\''+p+'\')" style="font-size:10px;padding:2px 7px;border-radius:99px;border:0.5px solid var(--border-med);background:none;cursor:pointer;color:var(--text3)">− Remove me</button>';
+    }
+    // Super admin gets a full dropdown to assign anyone
+    if (canAssignOthers) {
+      var opts = '<option value="">+ Assign team member</option>' +
+        db.users.filter(function(u){ return u.active && !assignedIds.includes(u.id); }).map(function(u){
+          return '<option value="'+u.id+'">'+u.name+'</option>';
+        }).join('');
+      assignHtml += '<select onchange="superAdminAssignPlatform(\''+p+'\',this)" style="font-size:11px;padding:2px 6px;border-radius:6px;border:0.5px solid var(--border-med);background:var(--surface);color:var(--text)">'+opts+'</select>';
+    }
+    assignHtml += '</div>';
+
+    return '<div class="plat-card status-'+st.status+'">'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
+      +platformBadge(p)
+      +'<span class="plat-status-pill '+pillClass+'">'+pillLabel+'</span>'
+      +'</div>'
+      +'<div style="font-size:11px;color:var(--text3);margin-bottom:6px">'+lastText+'</div>'
+      +(st.lastLog && st.lastLog.reportLabel ? '<div style="font-size:11px;color:var(--text2);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+st.lastLog.reportLabel+'</div>' : '')
+      +assignHtml
+      +'</div>';
+  }).join('');
+
+  // Update summary metric
+  var platCount = document.getElementById('ov-plat-count');
+  var platSub = document.getElementById('ov-plat-sub');
+  if (platCount) {
+    platCount.textContent = done + ' / ' + ALL_PLATFORMS.length;
+    platCount.style.color = done === ALL_PLATFORMS.length ? '#16a34a' : done >= ALL_PLATFORMS.length*0.7 ? '#d97706' : '#dc2626';
+  }
+  if (platSub) platSub.textContent = 'updated this month';
+}
+
+function assignSelfToPlatform(platform) {
+  if (!_currentUserId) return;
+  if (!db.platformAssignments) db.platformAssignments = {};
+  var ids = (db.platformAssignments[platform] || []).slice();
+  if (!ids.includes(_currentUserId)) ids.push(_currentUserId);
+  db.platformAssignments[platform] = ids;
+  saveDB();
+  sbSavePlatformAssignment(platform, ids);
+  renderPlatformTracker();
+  renderMyTasks();
+}
+
+function unassignSelfFromPlatform(platform) {
+  if (!_currentUserId) return;
+  if (!db.platformAssignments) db.platformAssignments = {};
+  var ids = (db.platformAssignments[platform] || []).filter(function(id){ return id !== _currentUserId; });
+  db.platformAssignments[platform] = ids;
+  saveDB();
+  sbSavePlatformAssignment(platform, ids);
+  renderPlatformTracker();
+  renderMyTasks();
+}
+
+function superAdminAssignPlatform(platform, select) {
+  var userId = select.value;
+  if (!userId) return;
+  select.value = '';
+  if (!db.platformAssignments) db.platformAssignments = {};
+  var ids = (db.platformAssignments[platform] || []).slice();
+  if (!ids.includes(userId)) ids.push(userId);
+  db.platformAssignments[platform] = ids;
+  saveDB();
+  sbSavePlatformAssignment(platform, ids);
+  renderPlatformTracker();
+  renderMyTasks();
+}
+
+function toggleSuperAdmin(userId) {
+  var u = db.users.find(function(u){ return u.id === userId; });
+  if (!u) return;
+  u.isSuperAdmin = !u.isSuperAdmin;
+  saveDB();
+  sbToggleSuperAdmin(userId, u.isSuperAdmin);
+  sbSaveUser(u);
+  renderTeamList();
+}
+
+function testPlatform(){
+  const id=document.getElementById('test-id').value.trim(),el=document.getElementById('test-result');
+  if(!id){el.innerHTML='';return;}
+  if(isNucleusClientId(id)){el.innerHTML=platformBadge('Nucleus')+` <span style="font-size:12px;color:var(--text2)">Nucleus client ID</span>`;return;}
+  if(/^\d{1,5}$/.test(id)){el.innerHTML=platformBadge('Wealthtime')+` <span style="font-size:12px;color:var(--text2)">Wealthtime ID</span>`;return;}
+  const cp=detectClientIdPlatform(id);if(cp){el.innerHTML=platformBadge(cp)+` <span style="font-size:12px;color:var(--text2)">client ID</span>`;return;}
+  const ap=detectPlatform(id,'');
+  if(ap==='DM-Unknown')el.innerHTML=platformBadge('Unknown')+` <span style="font-size:12px;color:var(--text2)">DM — needs AV/AC/EM/WP client ID</span>`;
+  else el.innerHTML=platformBadge(ap)+` <span style="font-size:12px;color:var(--text2)">account ID</span>`;
+}
+
+function adminTab(tab,btn){
+  document.querySelectorAll('.admin-pane,[id^="admin-"]').forEach(p=>{if(['admin-log','admin-team','admin-coverage','admin-assignments'].includes(p.id))p.style.display='none';});
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('admin-'+tab).style.display='block';
+  if(btn)btn.classList.add('active');
+  if(tab==='log')renderAdminLog();
+  if(tab==='team')renderTeamList();
+  if(tab==='coverage')renderCoverageGrid();
+  if(tab==='assignments')renderAdminAssignments();
+}
+
+function renderAdminAssignments(){
+  // Populate filters
+  var us=document.getElementById('asgn-filter-user');
+  var curU=us.value;
+  us.innerHTML='<option value="">All team members</option>';
+  db.users.forEach(function(u){var o=document.createElement('option');o.value=u.id;o.textContent=u.name;us.appendChild(o);});
+  us.value=curU;
+
+  var ps=document.getElementById('asgn-filter-platform');
+  var curP=ps.value;
+  ps.innerHTML='<option value="">All platforms</option>';
+  ALL_PLATFORMS.forEach(function(p){var o=document.createElement('option');o.value=p;o.textContent=p;ps.appendChild(o);});
+  ps.value=curP;
+
+  var fu=us.value;
+  var fst=document.getElementById('asgn-filter-status').value;
+  var fp=ps.value;
+
+  // Build rows — one per assignment
+  var rows=[];
+  Object.keys(db.assignments||{}).forEach(function(key){
+    var userId=db.assignments[key];
+    var err=db.errors.find(function(e){return _eKey(e)===key;});
+    if(!err)return;
+    var isRes=!!db.resolved[key];
+    rows.push({userId:userId,err:err,key:key,isRes:isRes});
+  });
+
+  // Filter
+  var filtered=rows.filter(function(r){
+    if(fu&&r.userId!==fu)return false;
+    if(fst==='open'&&r.isRes)return false;
+    if(fst==='resolved'&&!r.isRes)return false;
+    if(fp&&r.err.platform!==fp)return false;
+    return true;
+  });
+
+  // Summary
+  var openCount=filtered.filter(function(r){return!r.isRes;}).length;
+  var doneCount=filtered.filter(function(r){return r.isRes;}).length;
+  document.getElementById('asgn-summary').textContent=filtered.length+' assignments — '+openCount+' open, '+doneCount+' resolved';
+
+  var tbody=document.getElementById('asgn-tbody');
+  var empty=document.getElementById('asgn-empty');
+
+  if(!filtered.length){tbody.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+
+  // Sort — open first, then by user name
+  filtered.sort(function(a,b){
+    if(a.isRes!==b.isRes)return a.isRes?1:-1;
+    return getUserName(a.userId).localeCompare(getUserName(b.userId));
+  });
+
+  tbody.innerHTML=filtered.map(function(r){
+    var u=db.users.find(function(u){return u.id===r.userId;});
+    var col=getUserColor(r.userId);
+    var init=getUserInitials(r.userId);
+    return '<tr>'
+      +'<td><div style="display:flex;align-items:center;gap:8px">'
+      +'<div style="width:28px;height:28px;border-radius:50%;background:'+col+'20;color:'+col+';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0">'+init+'</div>'
+      +'<div><div style="font-weight:500;font-size:13px">'+(u?u.name:'Unknown')+'</div>'
+      +(u&&u.role?'<div style="font-size:11px;color:var(--text3)">'+u.role+'</div>':'')
+      +'</div></div></td>'
+      +'<td style="font-weight:500;cursor:pointer" onclick="openAcctPanel(\''+(r.err.accountId||r.err.clientId||'')+'\')">'+( r.err.client||'—')+'</td>'
+      +'<td class="mono" style="font-size:12px">'+(r.err.accountId||'—')+'</td>'
+      +'<td>'+platformBadge(r.err.platform)+'</td>'
+      +'<td>'+catBadge(r.err.category||'unknown')+'</td>'
+      +'<td style="font-size:12px;color:var(--text2);max-width:220px;white-space:normal;word-break:break-word;line-height:1.4">'+r.err.error+'</td>'
+      +'<td>'+(r.isRes
+        ?'<span class="st-pending">Resolved</span>'
+        :'<span class="st-open">Open</span>')+'</td>'
+      +'<td style="font-size:11px;color:var(--text3)">'+(r.err.reportLabel||'—')+'</td>'
+      +'</tr>';
+  }).join('');
+}
+
+function switchView(name){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  const map={mytasks:0,reappeared:1,overview:2,upload:3,errors:4,search:5,history:6,platforms:7,reconcile:8,admin:9};
+  const items=document.querySelectorAll('.nav-item');
+  if(map[name]!==undefined&&items[map[name]])items[map[name]].classList.add('active');
+  if(name==='overview')renderOverview();
+  if(name==='mytasks')renderMyTasks();
+  if(name==='reappeared')renderReappeared();
+  if(name==='errors'){pf();renderCatFilterChips();renderErrorLog();}
+  if(name==='history')renderHistoryList();
+  if(name==='admin'){renderAdminLog();renderTeamList();renderCoverageGrid();}
+}
+
+
+// ── RECONCILIATION ────────────────────────────────────────────────────
+var _reconRows = [];
+var _reconResults = [];
+
+function _normR(s) {
+  return (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function loadPlatFile(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var rows = [];
+    var fname = file.name.toLowerCase();
+    if (fname.endsWith('.csv')) {
+      var lines = e.target.result.replace(/\r/g, '').split('\n').filter(function(l) { return l.trim(); });
+      var hdrs = lines[0].split(',').map(function(h) { return h.replace(/^"|"$/g, '').trim(); });
+      rows = lines.slice(1).map(function(line) {
+        var vals = line.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/);
+        var row = {};
+        hdrs.forEach(function(h, i) { row[h] = (vals[i] || '').replace(/^"|"$/g, '').trim(); });
+        return row;
+      }).filter(function(r) { return Object.values(r).some(function(v) { return v; }); });
+    } else {
+      var wb = XLSX.read(e.target.result, {type: 'array'});
+      rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {defval: ''});
+    }
+    _reconRows = rows;
+    var box = document.getElementById('ru-box');
+    box.classList.add('ok');
+    document.getElementById('ru-lbl').textContent = file.name + ' — ' + rows.length.toLocaleString() + ' rows';
+    if (rows.length > 0) {
+      var cols = Object.keys(rows[0]);
+      ['rm-name', 'rm-id'].forEach(function(id, i) {
+        var el = document.getElementById(id);
+        while (el.options.length > 1) el.remove(1);
+        cols.forEach(function(c) {
+          var o = document.createElement('option');
+          o.value = c; o.textContent = c; el.appendChild(o);
+        });
+        var ng = cols.find(function(c) { return /client.?name|investor|full.?name|^name$/i.test(c); });
+        var ig = cols.find(function(c) { return /wrapper.?ref|account.?id|client.?id|^id$/i.test(c); });
+        if (i === 0 && ng) el.value = ng;
+        if (i === 1 && ig) el.value = ig;
+      });
+      var fn = file.name.toLowerCase();
+      var ps = document.getElementById('rm-plat');
+      if (fn.includes('transact'))           ps.value = 'Transact';
+      else if (fn.includes('aviva'))         ps.value = 'Aviva';
+      else if (fn.includes('quilter'))       ps.value = 'Quilter';
+      else if (fn.includes('abrdn') || fn.includes('aberdeen')) ps.value = 'ABRDN';
+      else if (fn.includes('nucleus'))       ps.value = 'Nucleus';
+      else if (fn.includes('fidelity'))      ps.value = 'Fidelity';
+      else if (fn.includes('wealthtime'))    ps.value = 'Wealthtime';
+      else if (fn.includes('scottish'))      ps.value = 'Scottish Widows';
+      else if (fn.includes('true_potential'))ps.value = 'True Potential';
+      else if (fn.includes('seven') || fn.includes('7im')) ps.value = '7IM';
+    }
+    _checkBothLoaded();
+    input.value = '';
+  };
+  if (file.name.toLowerCase().endsWith('.csv')) {
+    reader.readAsText(file);
+  } else {
+    reader.readAsArrayBuffer(file);
+  }
+}
+
+// Internal dashboard data loaded by user
+var _internalRows = [];
+
+function loadInternalFile(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var rows = [];
+    if (file.name.toLowerCase().endsWith('.csv')) {
+      var lines = e.target.result.replace(/\r/g, '').split('\n').filter(function(l) { return l.trim(); });
+      var hdrs = lines[0].split(',').map(function(h) { return h.replace(/^"|"$/g, '').trim(); });
+      rows = lines.slice(1).map(function(line) {
+        var vals = line.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/);
+        var row = {};
+        hdrs.forEach(function(h, i) { row[h] = (vals[i] || '').replace(/^"|"$/g, '').trim(); });
+        return row;
+      }).filter(function(r) { return Object.values(r).some(function(v) { return v; }); });
+    } else {
+      var wb = XLSX.read(e.target.result, {type: 'array'});
+      rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {defval: ''});
+    }
+    _internalRows = rows;
+    var box = document.getElementById('ri-box');
+    box.classList.add('ok');
+    document.getElementById('ri-lbl').textContent = file.name + ' — ' + rows.length.toLocaleString() + ' accounts loaded';
+    input.value = '';
+    _checkBothLoaded();
+  };
+  file.name.toLowerCase().endsWith('.csv') ? reader.readAsText(file) : reader.readAsArrayBuffer(file);
+}
+
+function _checkBothLoaded() {
+  if (_internalRows.length > 0 && _reconRows.length > 0) {
+    document.getElementById('rs2').style.display = 'block';
+  }
+}
+
+function runRecon() {
+  var nameCol = document.getElementById('rm-name').value;
+  var idCol   = document.getElementById('rm-id').value;
+  var platform = document.getElementById('rm-plat').value;
+  if (!nameCol) { alert('Please select the client name column.'); return; }
+  if (_internalRows.length === 0) { alert('Please upload the internal dashboard export first.'); return; }
+  // Build lookup from uploaded internal dashboard file
+  var intNames = new Set();
+  var intIds   = new Set();
+  var intNameCol = 'Account owner';
+  var intIdCol   = 'Account ID';
+  var intPlatCol = 'Platform';
+  // Auto-detect columns
+  if (_internalRows.length > 0) {
+    var cols = Object.keys(_internalRows[0]);
+    var nc = cols.find(function(c) { return /account.?owner|client.?name|full.?name|^name$/i.test(c); }) || cols[0];
+    var ic = cols.find(function(c) { return /account.?id|^id$/i.test(c); });
+    var pc = cols.find(function(c) { return /^platform$/i.test(c); });
+    intNameCol = nc; intIdCol = ic || ''; intPlatCol = pc || '';
+  }
+  _internalRows.forEach(function(r) {
+    var rPlat = intPlatCol ? (r[intPlatCol] || '') : '';
+    // Normalise platform names to match error report names
+    var platMap = {'Abrdn':'ABRDN','Wealthtime Select':'Wealthtime','Seven Investment Management':'7IM'};
+    rPlat = platMap[rPlat] || rPlat;
+    if (platform && rPlat && rPlat !== platform) return;
+    var n = _normR(r[intNameCol] || '');
+    if (n) intNames.add(n);
+    if (intIdCol && r[intIdCol]) intIds.add((r[intIdCol] || '').toString().toLowerCase());
+  });
+  var errByName = {};
+  var errById   = {};
+  db.errors.forEach(function(e) {
+    if (platform && e.platform !== platform) return;
+    if (e.client) {
+      var k = _normR(e.client);
+      if (!errByName[k]) errByName[k] = [];
+      errByName[k].push(e);
+    }
+    if (e.accountId) {
+      var k2 = e.accountId.toLowerCase();
+      if (!errById[k2]) errById[k2] = [];
+      errById[k2].push(e);
+    }
+    if (e.clientId) {
+      var k3 = e.clientId.toLowerCase();
+      if (!errById[k3]) errById[k3] = [];
+      errById[k3].push(e);
+    }
+  });
+  _reconResults = _reconRows.map(function(row) {
+    var platName = (row[nameCol] || '').toString().trim();
+    var platId   = idCol ? (row[idCol] || '').toString().trim() : '';
+    var normName = _normR(platName);
+    if (platName.indexOf(',') > 0) {
+      var parts = platName.split(',');
+      normName = _normR(parts[1].trim() + ' ' + parts[0].trim());
+    }
+    var normId = platId.toLowerCase();
+    var inInt  = intNames.has(normName) || (platId && intIds.has(normId));
+    var errs   = (errByName[normName] || []).concat(platId ? (errById[normId] || []) : []);
+    errs = errs.filter(function(v, i, a) { return a.indexOf(v) === i; });
+    return {
+      platName: platName,
+      platId: platId,
+      normName: normName,
+      status: inInt ? 'matched' : errs.length ? 'errored' : 'missing',
+      inInt: inInt,
+      errors: errs
+    };
+  });
+  _renderReconSummary();
+  renderReconTbl();
+  document.getElementById('rs3').style.display = 'block';
+  document.getElementById('rs3').scrollIntoView({behavior: 'smooth', block: 'start'});
+}
+
+function _renderReconSummary() {
+  var tot = _reconResults.length;
+  var mat = _reconResults.filter(function(r) { return r.status === 'matched'; }).length;
+  var err = _reconResults.filter(function(r) { return r.status === 'errored'; }).length;
+  var mis = _reconResults.filter(function(r) { return r.status === 'missing'; }).length;
+  var pct = tot ? Math.round(mat / tot * 100) : 0;
+  document.getElementById('rmet-cards').innerHTML =
+    '<div class="rmet"><div class="rmet-l">Platform accounts</div><div class="rmet-v">' + tot.toLocaleString() + '</div></div>' +
+    '<div class="rmet"><div class="rmet-l">In internal dashboard</div><div class="rmet-v" style="color:#16a34a">' + mat.toLocaleString() + '</div></div>' +
+    '<div class="rmet"><div class="rmet-l">Error reported</div><div class="rmet-v" style="color:#b45309">' + err.toLocaleString() + '</div></div>' +
+    '<div class="rmet"><div class="rmet-l">Missing &amp; silent</div><div class="rmet-v" style="color:#dc2626">' + mis.toLocaleString() + '</div></div>';
+  document.getElementById('r-pfill').style.width = pct + '%';
+  document.getElementById('r-plbl-l').textContent = pct + '% coverage';
+  document.getElementById('r-plbl-r').textContent = mis + ' unaccounted for';
+}
+
+function renderReconTbl() {
+  var fs = document.getElementById('rf-st').value;
+  var fq = (document.getElementById('rf-q').value || '').toLowerCase();
+  var filtered = _reconResults.filter(function(r) {
+    if (fs && r.status !== fs) return false;
+    if (fq && r.platName.toLowerCase().indexOf(fq) < 0 && r.platId.toLowerCase().indexOf(fq) < 0) return false;
+    return true;
+  });
+  var tbody = document.getElementById('r-tbody');
+  var empty = document.getElementById('r-empty');
+  var cnt   = document.getElementById('r-count');
+  if (!filtered.length) { tbody.innerHTML = ''; empty.style.display = 'block'; cnt.textContent = ''; return; }
+  empty.style.display = 'none';
+  var shown = filtered.slice(0, 300);
+  cnt.textContent = 'Showing ' + shown.length + ' of ' + filtered.length + ' accounts';
+  var sb = function(s) {
+    return {matched: '<span class="st-matched">Matched</span>', errored: '<span class="st-errored">Error reported</span>', missing: '<span class="st-missing">Missing &amp; silent</span>'}[s] || '';
+  };
+  tbody.innerHTML = shown.map(function(r) {
+    var e = r.errors[0];
+    return '<tr>'
+      + '<td style="font-weight:500">' + (r.platName || '—') + '</td>'
+      + '<td class="mono" style="font-size:12px">' + (r.platId || '—') + '</td>'
+      + '<td>' + sb(r.status) + '</td>'
+      + '<td style="font-size:12px">' + (r.inInt ? '<span style="color:#16a34a;font-weight:500">&#10003; Present</span>' : '<span style="color:var(--text3)">Not found</span>') + '</td>'
+      + '<td style="font-size:12px;max-width:200px">' + (e
+          ? '<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + e.error + '">' + e.error + '</div>'
+            + '<div style="font-size:10px;color:var(--text3)">' + (e.reportLabel || '') + '</div>'
+            + (r.errors.length > 1 ? '<div style="font-size:10px;color:var(--text3)">+' + (r.errors.length - 1) + ' more</div>' : '')
+          : '<span style="color:var(--text3)">—</span>') + '</td>'
+      + '<td>' + (e ? catBadge(e.category || 'unknown') : '—') + '</td>'
+      + '</tr>';
+  }).join('');
+}
+
+function exportReconCSV() {
+  var fs = document.getElementById('rf-st').value;
+  var rows = _reconResults.filter(function(r) { return !fs || r.status === fs; });
+  var h = ['Platform client', 'Account ID', 'Status', 'In internal dashboard', 'Error report entry', 'Error category', 'Report'];
+  var lines = [h.join(',')].concat(rows.map(function(r) {
+    var e = r.errors[0];
+    return [
+      '"' + r.platName + '"',
+      '"' + r.platId + '"',
+      r.status,
+      r.inInt ? 'Yes' : 'No',
+      e ? '"' + e.error + '"' : '',
+      e ? (CAT_DEFS[e.category] ? CAT_DEFS[e.category].label : '') : '',
+      e ? '"' + (e.reportLabel || '') + '"' : ''
+    ].join(',');
+  }));
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([lines.join('\n')], {type: 'text/csv'}));
+  a.download = 'reconciliation.csv';
+  a.click();
+}
+
+function resetRecon() {
+  _reconRows = []; _reconResults = []; _internalRows = [];
+  document.getElementById('ru-box').classList.remove('ok');
+  document.getElementById('ru-lbl').textContent = 'e.g. Transact template report';
+  document.getElementById('ru-inp').value = '';
+  document.getElementById('ri-box').classList.remove('ok');
+  document.getElementById('ri-lbl').textContent = 'Your Accounts export file';
+  document.getElementById('ri-inp').value = '';
+  document.getElementById('rs2').style.display = 'none';
+  document.getElementById('rs3').style.display = 'none';
+  document.getElementById('r-tbody').innerHTML = '';
+  document.getElementById('rmet-cards').innerHTML = '';
+}
+// ── END RECONCILIATION ────────────────────────────────────────────────
+
+// Init — auth first, then load data
+document.body.style.opacity = '0';
+
+async function initApp() {
+  document.body.style.opacity = '0.5';
+  var loadingEl = document.createElement('div');
+  loadingEl.id = 'sb-loading';
+  loadingEl.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;padding:20px 32px;border-radius:12px;font-family:inherit;font-size:14px;color:#1a1917;box-shadow:0 8px 32px rgba(0,0,0,.15);z-index:9999;text-align:center';
+  loadingEl.innerHTML = '<div style="font-weight:600;margin-bottom:6px">Loading shared data...</div><div style="font-size:12px;color:#6b6a65">Connecting to database</div>';
+  document.body.appendChild(loadingEl);
+  try {
+    await sbLoadAll();
+  } catch(e) {
+    console.error('Failed to load from Supabase, using local cache:', e);
+  }
+  if (document.getElementById('sb-loading')) {
+    document.body.removeChild(loadingEl);
+  }
+  document.body.style.opacity = '1';
+  populateUploaderSelect();
+  pf();
+  renderOverview();
+  await resolveUserLink();
+  startAutoRefresh();
+  renderReappearBanner();
+}
+
+// Start with auth check — initApp() called after successful login
+initAuth();
+
+// ── AUTO REFRESH ─────────────────────────────────────────────────────
+// Poll Supabase every 30 seconds to pick up changes from other users
+// Only refreshes the lightweight tables (resolved, assignments, notes)
+// not the full error set — keeps it fast and unobtrusive
+var _refreshInterval = null;
+var _lastRefreshEl = null;
+
+async function silentRefresh() {
+  try {
+    // Fetch the three tables that change frequently between users
+    var [rRes, rAsgn, rNotes] = await Promise.all([
+      _sb.from('resolved').select('*'),
+      _sb.from('assignments').select('*'),
+      _sb.from('notes').select('*'),
+    ]);
+
+    var changed = false;
+
+    // Update resolved — exclude soft-deleted (cleared) entries
+    var newResolved = {};
+    var newCleared = {};
+    (rRes.data || []).forEach(function(r) {
+      if (r.cleared) {
+        newCleared[r.key] = {clearedAt: r.cleared_at, clearedByReport: r.cleared_by_report};
+        return;
+      }
+      newResolved[r.key] = {ts: r.resolved_at, userId: r.resolved_by || null};
+    });
+    if (JSON.stringify(newResolved) !== JSON.stringify(db.resolved)) {
+      db.resolved = newResolved;
+      db.cleared = newCleared;
+      changed = true;
+    }
+
+    // Update assignments
+    var newAssignments = {};
+    (rAsgn.data || []).forEach(function(a) { newAssignments[a.key] = a.user_id; });
+    if (JSON.stringify(newAssignments) !== JSON.stringify(db.assignments)) {
+      db.assignments = newAssignments;
+      changed = true;
+    }
+
+    // Update notes
+    var newNotes = {};
+    (rNotes.data || []).forEach(function(n) { newNotes[n.account_key] = n.note; });
+    if (JSON.stringify(newNotes) !== JSON.stringify(db.notes)) {
+      db.notes = newNotes;
+      changed = true;
+    }
+
+    if (changed) {
+      saveDB();
+      // Re-render whatever is currently visible
+      var activeView = document.querySelector('.view.active');
+      if (activeView) {
+        var viewId = activeView.id;
+        if (viewId === 'view-errors') renderErrorLog();
+        if (viewId === 'view-overview') renderOverview();
+        if (viewId === 'view-mytasks') renderMyTasks();
+        if (viewId === 'view-search') renderAccountSearch();
+        if (viewId === 'view-reappeared') renderReappeared();
+      }
+      updateMyTasksBadge();
+      renderReappearBanner();
+      showRefreshIndicator();
+    }
+
+    // Update last-synced timestamp
+    updateSyncIndicator(true);
+  } catch(e) {
+    updateSyncIndicator(false);
+    console.warn('Silent refresh failed:', e);
+  }
+}
+
+function showRefreshIndicator() {
+  var el = document.getElementById('sync-indicator');
+  if (!el) return;
+  el.style.color = '#16a34a';
+  el.textContent = '● synced';
+  setTimeout(function() {
+    el.style.color = 'var(--text3)';
+    el.textContent = '● live';
+  }, 2000);
+}
+
+function updateSyncIndicator(ok) {
+  var el = document.getElementById('sync-indicator');
+  if (!el) return;
+  if (!ok) { el.style.color = '#dc2626'; el.textContent = '● offline'; }
+}
+
+function startAutoRefresh() {
+  if (_refreshInterval) clearInterval(_refreshInterval);
+  _refreshInterval = setInterval(silentRefresh, 30000);
+}
+
+function stopAutoRefresh() {
+  if (_refreshInterval) clearInterval(_refreshInterval);
+  _refreshInterval = null;
+}
+
+// ── REAPPEARANCE DETECTION ────────────────────────────────────────────
+// Detects resolved errors that have reappeared in a newer report.
+// Works for ALL error types including firm/adviser-level errors
+// that have no accountId.
+
+var _dismissedReappearKeys = new Set();
+
+function _reappearSig(e) {
+  // Signature that identifies the "same" error across different reports
+  // For account errors: firm + adviser + accountId + error text
+  // For firm/adviser errors: firm + adviser + error text (no accountId)
+  return [e.firm||'', e.adviser||'', e.accountId||'', (e.error||'').slice(0,80)].join('||');
+}
+
+function detectReappearances() {
+  if (!db.errors.length || !db.resolved) return [];
+
+  var bySig = {};
+  activeErrors().filter(function(e){ return e.category !== 'low-balance'; }).forEach(function(e) {
+    var sig = _reappearSig(e);
+    if (!bySig[sig]) bySig[sig] = [];
+    bySig[sig].push(e);
+  });
+
+  var reappeared = [];
+
+  Object.keys(bySig).forEach(function(sig) {
+    var errs = bySig[sig].sort(function(a,b){return a.ts<b.ts?-1:1;});
+    // Find if any earlier version of this error was resolved
+    var resolvedReports = new Set();
+    errs.forEach(function(e) {
+      var k = _eKey(e);
+      if (db.resolved[k]) resolvedReports.add(e.reportId);
+    });
+    if (!resolvedReports.size) return;
+
+    // Check if there's a NEWER report with this same error that is NOT resolved
+    var latestResolved = errs.filter(function(e){ return db.resolved[_eKey(e)]; })
+      .sort(function(a,b){return a.ts<b.ts?1:-1;})[0];
+    if (!latestResolved) return;
+
+    var newerUnresolved = errs.filter(function(e){
+      return e.ts > latestResolved.ts && !db.resolved[_eKey(e)];
+    });
+
+    newerUnresolved.forEach(function(e) {
+      var k = _eKey(e);
+      if (!_dismissedReappearKeys.has(k)) {
+        reappeared.push({
+          error: e,
+          key: k,
+          previouslyResolvedIn: latestResolved.reportLabel || 'unknown report'
+        });
+      }
+    });
+  });
+
+  return reappeared;
+}
+
+function renderReappearBanner() {
+  // Now just updates the nav badge — no banner
+  var items = detectReappearances();
+  updateErrorNavBadge(items.length);
+}
+
+function renderReappeared() {
+  var items = detectReappearances();
+
+  // Populate platform filter
+  var psel = document.getElementById('re-filter-platform');
+  var curP = psel.value;
+  while(psel.options.length > 1) psel.remove(1);
+  var platforms = [...new Set(items.map(function(i){return i.error.platform;}).filter(Boolean))].sort();
+  platforms.forEach(function(p){var o=document.createElement('option');o.value=p;o.textContent=p;psel.appendChild(o);});
+  psel.value = curP;
+
+  // Populate category filter
+  var csel = document.getElementById('re-filter-cat');
+  var curC = csel.value;
+  while(csel.options.length > 1) csel.remove(1);
+  var cats = [...new Set(items.map(function(i){return i.error.category;}).filter(Boolean))];
+  cats.forEach(function(c){var o=document.createElement('option');o.value=c;o.textContent=CAT_DEFS[c]?CAT_DEFS[c].label:c;csel.appendChild(o);});
+  csel.value = curC;
+
+  // Apply filters
+  var fp = psel.value;
+  var fc = csel.value;
+  var fst = document.getElementById('re-filter-status').value;
+  var fq = (document.getElementById('re-filter-search').value||'').toLowerCase();
+
+  var filtered = items.filter(function(item){
+    var e = item.error;
+    if(fp && e.platform !== fp) return false;
+    if(fc && e.category !== fc) return false;
+    var isRes = !!db.resolved[item.key];
+    if(fst === 'open' && isRes) return false;
+    if(fst === 'resolved' && !isRes) return false;
+    if(fq && ![e.client,e.adviser,e.firm,e.accountId,e.error].filter(Boolean).join(' ').toLowerCase().includes(fq)) return false;
+    return true;
+  });
+
+  var openCount = filtered.filter(function(i){return !db.resolved[i.key];}).length;
+  var reResolvedCount = filtered.filter(function(i){return !!db.resolved[i.key];}).length;
+  document.getElementById('re-summary').textContent = filtered.length + ' recurring — ' + openCount + ' still open, ' + reResolvedCount + ' re-resolved';
+
+  var empty = document.getElementById('re-empty');
+  var content = document.getElementById('re-content');
+
+  if (!filtered.length) {
+    empty.style.display = 'block';
+    content.innerHTML = '';
+    return;
+  }
+  empty.style.display = 'none';
+
+  // Sort — open first, then by most recent report
+  filtered.sort(function(a,b){
+    var aRes = !!db.resolved[a.key];
+    var bRes = !!db.resolved[b.key];
+    if(aRes !== bRes) return aRes ? 1 : -1;
+    return a.error.ts < b.error.ts ? 1 : -1;
+  });
+
+  content.innerHTML = filtered.map(function(item) {
+    var e = item.error;
+    var k = item.key;
+    var isRes = !!db.resolved[k];
+    var resData = db.resolved[k] || null;
+    var isAccount = !!e.accountId;
+    var label = isAccount
+      ? (e.client || e.accountId)
+      : (e.adviser ? e.adviser : (e.firm || 'Unknown'));
+    var sublabel = isAccount
+      ? (e.firm ? e.firm + (e.adviser ? ' · ' + e.adviser : '') : '')
+      : (isAccount ? '' : e.firm || '');
+    var noteKey = e.accountId || e.clientId || '';
+    var note = (db.notes && db.notes[noteKey]) ? db.notes[noteKey] : '';
+    var assignedId = db.assignments && db.assignments[k] ? db.assignments[k] : null;
+
+    return '<div class="card" style="border-left:3px solid #dc2626;opacity:'+(isRes?'.65':'1')+'">'
+      +'<div style="display:flex;align-items:flex-start;gap:12px">'
+      +'<div style="flex:1;min-width:0">'
+      // Header row
+      +'<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:6px">'
+      +'<span style="font-size:11px;font-weight:700;background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:99px">⚠ Recurring</span>'
+      +catBadge(e.category||'unknown')
+      +platformBadge(e.platform)
+      +(e.accountId?'<span class="id-pill">'+e.accountId+'</span>':'')
+      +(isRes?'<span class="st-pending" style="margin-left:4px">Re-resolved</span>':'<span class="st-open" style="margin-left:4px">Still open</span>')
+      +'</div>'
+      // Name
+      +'<div style="font-weight:600;font-size:14px;margin-bottom:2px;cursor:'+(isAccount?'pointer':'default')+'" '+(isAccount?'onclick="openAcctPanel(\''+( e.accountId||e.clientId||'')+'\')">':'>') +label+'</div>'
+      +(sublabel?'<div style="font-size:12px;color:var(--text3);margin-bottom:6px">'+sublabel+'</div>':'')
+      // Error text
+      +'<div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:8px">'+e.error+'</div>'
+      // History line
+      +'<div style="font-size:11px;color:var(--text3);background:var(--surface2);padding:6px 10px;border-radius:6px;margin-bottom:8px">'
+      +'Previously resolved in: <strong style="color:var(--text2)">'+item.previouslyResolvedIn+'</strong>'
+      +' · Reappeared in: <strong style="color:#dc2626">'+( e.reportLabel||'new report')+'</strong>'
+      +(resData&&resData.userId?'<span style="margin-left:8px;color:var(--text3)">Re-resolved by: <strong style="color:var(--text2)">'+getUserName(resData.userId)+'</strong></span>':'')
+      +'</div>'
+      // Note
+      +(note?'<div style="font-size:12px;color:var(--text2);background:var(--surface2);padding:6px 10px;border-radius:6px;border-left:3px solid var(--border-med);margin-bottom:8px">'+note+'</div>':'')
+      // Assignment and actions
+      +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+      +(assignedId?'<div style="font-size:11px;color:var(--text3)">Assigned to: <strong style="color:var(--text2)">'+getUserName(assignedId)+'</strong></div>':'')
+      +(noteKey?'<button onclick="openNoteModal(\''+noteKey+'\',this)" style="font-size:11px;color:var(--text3);padding:3px 8px;border-radius:6px;border:0.5px solid var(--border-med);background:none;cursor:pointer">'+(note?'Edit note':'+ Note')+'</button>':'')
+      +'</div>'
+      +'</div>'
+      // Resolve checkbox
+      +'<div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:6px">'
+      +'<input type="checkbox" class="rcb" '+(isRes?'checked ':'')+' onchange="toggleResolved(\''+k+'\')" style="width:17px;height:17px;cursor:pointer">'
+      +'<div style="font-size:10px;color:var(--text3);text-align:center">'+(isRes?'Resolved':'Mark<br>resolved')+'</div>'
+      +'</div>'
+      +'</div>'
+      +'</div>';
+  }).join('');
+}
+
+function dismissReappearBanner() {
+  var items = detectReappearances();
+  items.forEach(function(item){ _dismissedReappearKeys.add(item.key); });
+  updateErrorNavBadge(0);
+}
+
+function jumpToReappeared(errorKey) {
+  switchView('reappeared');
+}
+
+function updateErrorNavBadge(count) {
+  var badge = document.getElementById('reappear-nav-badge');
+  if (!badge) return;
+  if (count > 0) { badge.textContent = count; badge.style.display = 'inline-block'; }
+  else { badge.style.display = 'none'; }
+}
+</script>
+
+<!-- ACCOUNT DETAIL PANEL -->
+<div id="acct-panel-overlay" class="acct-panel-overlay" onclick="if(event.target===this)closeAcctPanel()">
+  <div class="acct-panel" id="acct-panel">
+    <div class="acct-panel-head">
+      <button class="acct-panel-close" onclick="closeAcctPanel()">✕</button>
+      <div id="ap-initials-row" style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+        <div id="ap-initials" class="initials-circle" style="width:44px;height:44px;font-size:16px"></div>
+        <div>
+          <div id="ap-name" style="font-size:17px;font-weight:600;line-height:1.2"></div>
+          <div id="ap-ids" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:5px"></div>
+        </div>
+        <div id="ap-recur-badge" style="margin-left:auto"></div>
+      </div>
+      <div id="ap-badges" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+    </div>
+    <div class="acct-panel-body">
+
+      <!-- Current state -->
+      <div class="acct-panel-section">
+        <div class="acct-panel-section-title">Current state</div>
+        <div class="info-grid" id="ap-info-grid"></div>
+        <div id="ap-note-block" style="margin-top:10px;display:none">
+          <div style="font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--text3);margin-bottom:6px">Account note</div>
+          <div id="ap-note-text" class="audit-note-bubble" style="font-style:normal"></div>
+          <button id="ap-note-edit-btn" style="margin-top:6px;font-size:11px;color:var(--text3);padding:3px 8px;border-radius:6px;border:0.5px solid var(--border-med);background:none;cursor:pointer">Edit note</button>
+        </div>
+        <div id="ap-no-note-block" style="margin-top:10px">
+          <button id="ap-add-note-btn" style="font-size:11px;color:var(--text3);padding:4px 10px;border-radius:6px;border:0.5px dashed var(--border-med);background:none;cursor:pointer">+ Add note</button>
+        </div>
+      </div>
+
+      <!-- Full audit trail -->
+      <div class="acct-panel-section">
+        <div class="acct-panel-section-title">Full history &amp; audit trail</div>
+        <div id="ap-audit-trail"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- LINK ACCOUNT MODAL -->
+<div id="link-modal" class="link-modal-overlay" onclick="if(event.target===this&&_linkModalDismissable)closeLinkModal()">
+  <div class="link-modal">
+    <div style="font-size:28px;margin-bottom:10px">👋</div>
+    <div class="link-modal-title">Who are you?</div>
+    <div class="link-modal-sub" id="link-modal-sub">You're signed in as <strong id="link-modal-email"></strong>. Select your name from the team list so your tasks and assignments are linked to you.</div>
+    <div id="link-member-list" style="margin-bottom:16px;max-height:280px;overflow-y:auto"></div>
+    <div style="display:flex;gap:8px;justify-content:center">
+      <button id="link-skip-btn" onclick="skipLinkAccount()" style="font-size:12px;color:var(--text3)">I'm not in the list</button>
+      <button class="primary" onclick="confirmLinkAccount()" id="link-confirm-btn" disabled style="opacity:.5">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- NOTE MODAL -->
+<div id="note-modal" class="modal-overlay" onclick="if(event.target===this)closeNoteModal()">
+  <div class="modal" style="width:440px">
+    <div class="modal-title">Account note</div>
+    <div id="note-modal-sub" style="font-size:12px;color:var(--text3);margin-bottom:14px;font-family:'DM Mono',monospace"></div>
+    <textarea id="note-modal-textarea" rows="5" placeholder="Add a note about this account — it will appear whenever this account appears in any future error report..." style="width:100%;margin-bottom:14px;font-size:13px;line-height:1.6;resize:vertical"></textarea>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:14px">Notes are linked to the account ID and carry over across all reports.</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button onclick="closeNoteModal()">Cancel</button>
+      <button class="primary" onclick="saveNote()">Save note</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
